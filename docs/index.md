@@ -12,7 +12,7 @@ Bitcoin is focused on being *the best money*.
 
 ### Ethereum
 
-Ethereum is focused on being *a global compute platform*. It's main innovation is the 'EVM' - the Ethereum Virtual Machine. [...]
+Ethereum is focused on being *a global compute platform*. Its main innovation is the 'EVM' - the Ethereum Virtual Machine. [...]
 
 However, a turing complete platform introduces unintended security risks and backdoors [...]
 
@@ -95,31 +95,7 @@ private key: 984D4E4EC6AB5C772876135D88DF40F13B7B5880324A6D7F19E16DB292F8C443
 
 ### Tutorial: Create an Account and Fund via Faucet
 
-```python
-async def create_account_with_tokens_from_faucet(facade, amount=500, private_key=None):
-	# create a key pair that will be used to send transactions
-	# when the PrivateKey is known, pass the raw private key bytes or hex encoded string to the PrivateKey(...) constructor instead
-	key_pair = facade.KeyPair(PrivateKey.random()) if private_key is None else facade.KeyPair(private_key)
-	address = facade.network.public_key_to_address(key_pair.public_key)
-	print(f'new account created with address: {address}')
-
-	async with ClientSession(raise_for_status=True) as session:
-		# initiate a HTTP POST request to faucet endpoint
-		request = {
-			'recipient': str(address),
-			'amount': amount,
-			'selectedMosaics': ['72C0212E67A08BCE']  # XYM mosaic id on testnet
-		}
-		async with session.post(f'{SYMBOL_TOOLS_ENDPOINT}/claims', json=request) as response:
-			# wait for the (JSON) response
-			response_json = await response.json()
-
-			# extract the funding transaction hash and wait for it to be confirmed
-			transaction_hash = Hash256(response_json['txHash'])
-			await wait_for_transaction_status(transaction_hash, 'confirmed', transaction_description='funding transaction')
-
-	return key_pair
-```
+TODO
 
 ### Tutorial: Querying the Balance of an Account
 
@@ -260,7 +236,7 @@ async def create_account_metadata_new(facade, signer_key_pair):
 		'signer_public_key': signer_key_pair.public_key,
 		'deadline': network_time.timestamp,
 
-		'type': 'aggregate_complete_transaction_v2',
+		'type': 'aggregate_complete_transaction_v3',
 		'transactions_hash': facade.hash_embedded_transactions(embedded_transactions),
 		'transactions': embedded_transactions
 	})
@@ -335,7 +311,7 @@ async def create_account_metadata_modify(facade, signer_key_pair):
 		'signer_public_key': signer_key_pair.public_key,
 		'deadline': network_time.timestamp,
 
-		'type': 'aggregate_complete_transaction_v2',
+		'type': 'aggregate_complete_transaction_v3',
 		'transactions_hash': facade.hash_embedded_transactions(embedded_transactions),
 		'transactions': embedded_transactions
 	})
@@ -370,7 +346,7 @@ async def create_account_metadata_modify(facade, signer_key_pair):
 
 ### Tutorial: Adding, Modifying or Removing a Cosignatory
 
-In Symbol an account can be turned into multisig account using `multisig account modification` transaction. Modification requires cosignatures of all involved parties, so multisig account modification transactions is only allowed as an transaction within aggregate transaction.
+In Symbol an account can be turned into multisig account using `multisig account modification` transaction. Modification requires cosignatures of all involved parties, so multisig account modification transactions is only allowed as a transaction within aggregate transaction.
 
 To actually cosign transactions, private keys of cosignatories are needed. In example below, the code has access to all private keys, of course, in reality every cosignatory will need to cosign on their own.
 
@@ -415,7 +391,7 @@ async def create_multisig_account_modification_new_account(facade, signer_key_pa
 		'signer_public_key': signer_key_pair.public_key,
 		'deadline': network_time.timestamp,
 
-		'type': 'aggregate_complete_transaction_v2',
+		'type': 'aggregate_complete_transaction_v3',
 		'transactions_hash': facade.hash_embedded_transactions(embedded_transactions),
 		'transactions': embedded_transactions
 	})
@@ -504,7 +480,7 @@ async def create_multisig_account_modification_modify_account(facade, signer_key
 		'signer_public_key': cosignatory_key_pairs[0].public_key,  # signer of the aggregate is one of the two cosignatories
 		'deadline': network_time.timestamp,
 
-		'type': 'aggregate_complete_transaction_v2',
+		'type': 'aggregate_complete_transaction_v3',
 		'transactions_hash': facade.hash_embedded_transactions(embedded_transactions),
 		'transactions': embedded_transactions
 	})
@@ -545,7 +521,7 @@ async def create_multisig_account_modification_modify_account(facade, signer_key
 
 Note, that the aggregate transaction is signed by `cosignatory[0]` key pair, but "signer" (or rather _sender_) of the modification transaction is `multisig_key_pair`.
 
-Cosignature of a cosignatory that is added to multisig is ALWAYS required, independent of current settings of `min_approval` or `min_removal`. Reason for this is pretty straight-forward, newly added account must "agree" to actually become cosignatory.
+Cosignature of a cosignatory that is added to multisig is ALWAYS required, independent of current settings of `min_approval` or `min_removal`. Reason for this is pretty straightforward, newly added account must "agree" to actually become cosignatory.
 
 ### Tutorial: Vanity Generation and You
 
@@ -600,9 +576,9 @@ Note, currently both vanity generators provide BIP-39 mnemonic which can be used
               private key: 93-please-dont-use-this-its-just-for-demonstration-purposes-6410
                  mnemonic: deer grid tonight gym royal wear topple amazing message item lend tortoise    bounce carpet toward spatial camera xxx xxx xxx xxx xxx xxx coconut
    ```
-   While searching for 5 chars might finish in few minutes, search time increases expotentially with every    character. Searching for strings containing characters outside of base32 alphabet (i.e. `0`, `1`, `8`,    `9`) will never finish.
+   While searching for 5 chars might finish in few minutes, search time increases exponentially with every    character. Searching for strings containing characters outside of base32 alphabet (i.e. `0`, `1`, `8`,    `9`) will never finish.
 
-   Due to how base32 encoding works, the only availible prefixes in mainnet are `NA, NB, NC, ND`, to    search starting at the beginning of an address prefix input with a caret sign `^`:
+   Due to how base32 encoding works, the only available prefixes in mainnet are `NA, NB, NC, ND`, to    search starting at the beginning of an address prefix input with a caret sign `^`:
    ```shell
    $ ./bin/catapult.tools.addressgen --network mainnet --input ^NAHELL
         address (mainnet): NAHELLACJKBYBQGQ7ZGLOOYDFWKE2ZSWB3A3HDQ
@@ -788,7 +764,7 @@ async def create_namespace_metadata_new(facade, signer_key_pair):
 		'signer_public_key': signer_key_pair.public_key,
 		'deadline': network_time.timestamp,
 
-		'type': 'aggregate_complete_transaction_v2',
+		'type': 'aggregate_complete_transaction_v3',
 		'transactions_hash': facade.hash_embedded_transactions(embedded_transactions),
 		'transactions': embedded_transactions
 	})
@@ -859,7 +835,7 @@ async def create_namespace_metadata_modify(facade, signer_key_pair):  # pylint: 
 		'signer_public_key': signer_key_pair.public_key,
 		'deadline': network_time.timestamp,
 
-		'type': 'aggregate_complete_transaction_v2',
+		'type': 'aggregate_complete_transaction_v3',
 		'transactions_hash': facade.hash_embedded_transactions(embedded_transactions),
 		'transactions': embedded_transactions
 	})
@@ -978,7 +954,7 @@ async def create_mosaic_definition_new(facade, signer_key_pair):
 
 **Create a supply:**
 
-Mosaic above has id `0x1788BA84888894EB`, following transaction will increase it's supply. Supply needs to be specified in atomic unis. Mosaic has divisibility set to 2, so to create 123 mosaics `12300` needs to be specified as number of units.
+Mosaic above has id `0x1788BA84888894EB`, following transaction will increase its supply. Supply needs to be specified in atomic units. Mosaic has divisibility set to 2, so to create 123 mosaics `12300` needs to be specified as number of units.
 
 ```python
 async def create_mosaic_supply(facade, signer_key_pair):
@@ -1327,7 +1303,7 @@ Target address needs to be set to mosaic owner address.
 
 In a similar way to account metadata, mosaic metadata always require to be wrapped within an aggregate.
 
-In future there some scoped keys might be standarized to be used across different issuers.
+In future there some scoped keys might be standardized to be used across different issuers.
 
 **Simple mosaic metadata assignment:**
 
@@ -1370,7 +1346,7 @@ async def create_mosaic_metadata_new(facade, signer_key_pair):
 		'signer_public_key': signer_key_pair.public_key,
 		'deadline': network_time.timestamp,
 
-		'type': 'aggregate_complete_transaction_v2',
+		'type': 'aggregate_complete_transaction_v3',
 		'transactions_hash': facade.hash_embedded_transactions(embedded_transactions),
 		'transactions': embedded_transactions
 	})
@@ -1417,7 +1393,7 @@ async def create_mosaic_metadata_cosigned_1(facade, signer_key_pair):
 	network_time = network_time.add_hours(2)
 
 	authority_semi_deterministic_key = PrivateKey(signer_key_pair.private_key.bytes[:-4] + bytes([0, 0, 0, 0]))
-	authority_key_pair = await create_account_with_tokens_from_faucet(facade, 100, authority_semi_deterministic_key)
+	authority_key_pair = await create_account_with_tokens(facade, 100, authority_semi_deterministic_key)
 
 	# set new high score for an account
 
@@ -1446,7 +1422,7 @@ async def create_mosaic_metadata_cosigned_1(facade, signer_key_pair):
 		'signer_public_key': authority_key_pair.public_key,
 		'deadline': network_time.timestamp,
 
-		'type': 'aggregate_complete_transaction_v2',
+		'type': 'aggregate_complete_transaction_v3',
 		'transactions_hash': facade.hash_embedded_transactions(embedded_transactions),
 		'transactions': embedded_transactions
 	})
@@ -1499,7 +1475,7 @@ async def create_mosaic_metadata_cosigned_2(facade, signer_key_pair):
 	network_time = network_time.add_hours(2)
 
 	authority_semi_deterministic_key = PrivateKey(signer_key_pair.private_key.bytes[:-4] + bytes([0, 0, 0, 0]))
-	authority_key_pair = await create_account_with_tokens_from_faucet(facade, 100, authority_semi_deterministic_key)
+	authority_key_pair = await create_account_with_tokens(facade, 100, authority_semi_deterministic_key)
 
 	# update high score for an account
 
@@ -1528,7 +1504,7 @@ async def create_mosaic_metadata_cosigned_2(facade, signer_key_pair):
 		'signer_public_key': authority_key_pair.public_key,
 		'deadline': network_time.timestamp,
 
-		'type': 'aggregate_complete_transaction_v2',
+		'type': 'aggregate_complete_transaction_v3',
 		'transactions_hash': facade.hash_embedded_transactions(embedded_transactions),
 		'transactions': embedded_transactions
 	})
@@ -1567,7 +1543,7 @@ async def create_mosaic_metadata_cosigned_2(facade, signer_key_pair):
 	await wait_for_transaction_status(transaction_hash, 'confirmed', transaction_description='mosaic metadata (cosigned 2) transaction')
 ```
 
-**Quering mosaic state:**
+**Querying mosaic state:**
 
 TODO: not sure if we should list all possible ways to query metadata here, especially if the API is subject to change...
 
@@ -1618,7 +1594,7 @@ async def create_mosaic_atomic_swap(facade, signer_key_pair):
 	network_time = network_time.add_hours(2)
 
 	# create a second signing key pair that will be used as the swap partner
-	partner_key_pair = await create_account_with_tokens_from_faucet(facade)
+	partner_key_pair = await create_account_with_tokens(facade)
 
 	# Alice (signer) owns some amount of custom mosaic (with divisibility=2)
 	# Bob (partner) wants to exchange 20 xym for a single piece of Alice's custom mosaic
@@ -1650,7 +1626,7 @@ async def create_mosaic_atomic_swap(facade, signer_key_pair):
 		'signer_public_key': signer_key_pair.public_key,
 		'deadline': network_time.timestamp,
 
-		'type': 'aggregate_complete_transaction_v2',
+		'type': 'aggregate_complete_transaction_v3',
 		'transactions_hash': facade.hash_embedded_transactions(embedded_transactions),
 		'transactions': embedded_transactions
 	})
@@ -1985,7 +1961,7 @@ async def create_multisig_account_modification_new_account_bonded(facade, signer
 		'signer_public_key': signer_key_pair.public_key,
 		'deadline': network_time.timestamp,
 
-		'type': 'aggregate_bonded_transaction_v2',
+		'type': 'aggregate_bonded_transaction_v3',
 		'transactions_hash': facade.hash_embedded_transactions(embedded_transactions),
 		'transactions': embedded_transactions
 	})
@@ -2783,7 +2759,7 @@ This contract is not production ready.
 Few things that should be taken care of:
  * timing lock/contract expiry is crucial for security of both parties (see explanation after _Guts_)
  * due to gas involved, ETH contract should use sha3 instead of double sha256,
- * unfortunatelly, sha3 opcode in EVM is actually keccak256,
+ * unfortunately, sha3 opcode in EVM is actually keccak256,
  * although Symbol uses sha3 it does not older variant usually referred to as keccak, `Op_Sha3_256` lock type is actual sha3 not keccak; adding keccak would require fork
 :::
 
@@ -2959,7 +2935,7 @@ Alice will swap 0.2 ETH with Bob for 7887 XYM.
 
 As mentioned in 2.3 lock created in symbol should be _slightly_ shorter. If it would be longer, or in general if ETH timelock will expire before Symbol's lock, Alice could cheat Bob, simply by waiting until eth timelock expires and then publishing both:
  * withdraw (secret proof transaction) inside Symbol network
- * calling `refund(...)` method indside Ethereum network.
+ * calling `refund(...)` method inside Ethereum network.
 
 TODO: hands-on example with expired locks
 
@@ -3129,7 +3105,7 @@ async def read_websocket_transaction_bonded_flow(facade, signer_key_pair):
 		'signer_public_key': signer_key_pair.public_key,
 		'deadline': network_time.timestamp,
 
-		'type': 'aggregate_bonded_transaction_v2',
+		'type': 'aggregate_bonded_transaction_v3',
 		'transactions_hash': facade.hash_embedded_transactions(embedded_transactions),
 		'transactions': embedded_transactions
 	})
