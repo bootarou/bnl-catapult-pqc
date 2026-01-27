@@ -160,7 +160,8 @@ elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
 	# - Wno-switch-enum: do not require enum switch statements to list every value (this setting is also incompatible with GCC warnings)
 	# - Wno-weak-vtables: vtables are emitted in all translation units for virtual classes with no out-of-line virtual method definitions
 	# - Wno-unsafe-buffer-usage: allow unsafe buffer usage https://reviews.llvm.org/D137379
-	# = Wno-shadow-uncaptured-local: allow shadowing of local variables in lambdas https://github.com/llvm/llvm-project/issues/81307
+	# - Wno-shadow-uncaptured-local: allow shadowing of local variables in lambdas https://github.com/llvm/llvm-project/issues/81307
+	# - Wno-thread-safety-negative: error: acquiring mutex 'm_mutex' requires negative capability '!m_mutex'
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
 		-stdlib=libc++ \
 		-Weverything \
@@ -173,7 +174,14 @@ elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
 		-Wno-weak-vtables \
 		-Wno-unsafe-buffer-usage \
 		-Wno-shadow-uncaptured-local \
-		-Wno-switch-default")
+		-Wno-switch-default \
+		-Wno-thread-safety-negative")
+
+	if("${CMAKE_CXX_COMPILER_VERSION}" MATCHES "^21.")
+		# - Wno-nrvo: error: not eliding copy on return
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
+			-Wno-nrvo")
+	endif()
 
 	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -g1")
 
@@ -278,9 +286,11 @@ function(catapult_set_test_compiler_options)
 	elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
 		# - Wno-global-constructors: required for GTEST test definition macros
 		# - Wno-zero-as-null-pointer-constant: workaround for GTEST NULL/nullptr mismatch https://github.com/google/googletest/issues/1323
+		# - Wno-missing-noreturn: some test functions do not return a value
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
 			-Wno-global-constructors \
-			-Wno-zero-as-null-pointer-constant"
+			-Wno-zero-as-null-pointer-constant \
+			-Wno-missing-noreturn"
 			PARENT_SCOPE)
 	endif()
 endfunction()
