@@ -36,6 +36,11 @@ def generate_mosaic_alias_id(fully_qualified_name):
 	return generate_namespace_path(fully_qualified_name)[-1]
 
 
+def is_mosaic_alias(mosaic_id):
+	"""Determines if mosaic_id is an alias."""
+	return 0 != (mosaic_id & NAMESPACE_FLAG)
+
+
 def is_valid_namespace_name(name):
 	"""Returns true if a name is a valid namespace name."""
 	def is_alphanum(character):

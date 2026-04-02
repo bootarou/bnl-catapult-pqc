@@ -5,6 +5,7 @@ from symbolchain.symbol.IdGenerator import (
 	generate_mosaic_id,
 	generate_namespace_id,
 	generate_namespace_path,
+	is_mosaic_alias,
 	is_valid_namespace_name
 )
 from symbolchain.symbol.Network import Address
@@ -147,6 +148,20 @@ class IdGeneratorTest(unittest.TestCase):
 
 	def test_generate_mosaic_alias_id_rejects_empty_string(self):
 		self._assert_rejected_by_generate_mosaic_alias_id([''])
+
+	# endregion
+
+	# region is_mosaic_alias
+
+	def test_is_mosaic_alias_only_returns_true_when_mosaic_id_is_alias(self):
+		# Assert: high-bit unset => False
+		self.assertFalse(is_mosaic_alias(0x7FFFFFFFFFFFFFFF))
+		self.assertFalse(is_mosaic_alias(0x0FFFFFFFFFFFFFFF))
+
+		# - high-bit set => True
+		self.assertTrue(is_mosaic_alias(0x8FFFFFFFFFFFFFFF))
+		self.assertTrue(is_mosaic_alias(0xFFFFFFFFFFFFFFFF))
+		self.assertTrue(is_mosaic_alias(generate_mosaic_alias_id('cat.token')))
 
 	# endregion
 
