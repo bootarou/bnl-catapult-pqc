@@ -19,6 +19,9 @@ def generate_mosaic_id(owner_address, nonce):
 
 def generate_namespace_id(name, parent_namespace_id=0):
 	"""Generates a namespace id from a name and an optional parent namespace id."""
+	if '.' in name:
+		raise ValueError(f'\'name\' cannot contain \'.\'; if {name} is a namepace path, consider using generate_namespace_path')
+
 	hasher = hashlib.sha3_256()
 	hasher.update(parent_namespace_id.to_bytes(8, 'little'))
 	hasher.update(name.encode('utf8'))

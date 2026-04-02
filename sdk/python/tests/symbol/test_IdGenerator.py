@@ -107,6 +107,10 @@ class IdGeneratorTest(unittest.TestCase):
 			# Assert:
 			self.assertEqual(1, namespace_id >> 63)
 
+	def test_generate_namespace_id_fails_if_name_contains_namespace_separator(self):
+		with self.assertRaisesRegex(ValueError, r'\'name\' cannot contain \'.\''):
+			generate_namespace_id('symbol.xym')
+
 	# endregion
 
 	# region generate_mosaic_alias_id
@@ -143,6 +147,26 @@ class IdGeneratorTest(unittest.TestCase):
 
 	def test_generate_mosaic_alias_id_rejects_empty_string(self):
 		self._assert_rejected_by_generate_mosaic_alias_id([''])
+
+	# endregion
+
+	# region is_valid_namespace_name
+
+	def test_is_valid_namespace_name_returns_true_when_all_characters_are_alphanumeric(self):
+		for name in ['a', 'be', 'cat', 'doom', '09az09', 'az09az']:
+			self.assertTrue(is_valid_namespace_name(name))
+
+	def test_is_valid_namespace_name_returns_true_when_name_contains_separator(self):
+		for name in ['al-ce', 'al_ce', 'alice-', 'alice_']:
+			self.assertTrue(is_valid_namespace_name(name))
+
+	def test_is_valid_namespace_name_returns_false_when_name_starts_with_separator(self):
+		for name in ['-alice', '_alice']:
+			self.assertFalse(is_valid_namespace_name(name))
+
+	def test_is_valid_namespace_name_returns_false_when_any_character_is_invalid(self):
+		for name in ['al.ce', 'alIce', 'al ce', 'al@ce', 'al#ce']:
+			self.assertFalse(is_valid_namespace_name(name))
 
 	# endregion
 
@@ -189,25 +213,5 @@ class IdGeneratorTest(unittest.TestCase):
 
 	def test_generate_namespace_path_rejects_empty_string(self):
 		self._assert_rejected_by_generate_namespace_path([''])
-
-	# endregion
-
-	# region is_valid_namespace_name
-
-	def test_is_valid_namespace_name_returns_true_when_all_characters_are_alphanumeric(self):
-		for name in ['a', 'be', 'cat', 'doom', '09az09', 'az09az']:
-			self.assertTrue(is_valid_namespace_name(name))
-
-	def test_is_valid_namespace_name_returns_true_when_name_contains_separator(self):
-		for name in ['al-ce', 'al_ce', 'alice-', 'alice_']:
-			self.assertTrue(is_valid_namespace_name(name))
-
-	def test_is_valid_namespace_name_returns_false_when_name_starts_with_separator(self):
-		for name in ['-alice', '_alice']:
-			self.assertFalse(is_valid_namespace_name(name))
-
-	def test_is_valid_namespace_name_returns_false_when_any_character_is_invalid(self):
-		for name in ['al.ce', 'alIce', 'al ce', 'al@ce', 'al#ce']:
-			self.assertFalse(is_valid_namespace_name(name))
 
 	# endregion
