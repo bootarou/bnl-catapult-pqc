@@ -111,6 +111,10 @@ describe('idGenerator', () => {
 				expect(namespaceId >> 63n, `i: ${i}`).to.equal(1n);
 			}
 		});
+
+		it('fails if name contains namespace separator', () => {
+			expect(() => { generateNamespaceId('symbol.xym'); }).to.throw('\'name\' cannot contain \'.\'');
+		});
 	});
 
 	// endregion
@@ -156,6 +160,36 @@ describe('idGenerator', () => {
 
 		it('rejects empty string', () => {
 			assertRejected(['']);
+		});
+	});
+
+	// endregion
+
+	// region isValidNamespaceName
+
+	describe('isValidNamespaceName', () => {
+		it('returns true when all characters are alphanumeric', () => {
+			['a', 'be', 'cat', 'doom', '09az09', 'az09az'].forEach(name => {
+				expect(isValidNamespaceName(name), `name: ${name}`).to.equal(true);
+			});
+		});
+
+		it('returns true when name contains separator', () => {
+			['al-ce', 'al_ce', 'alice-', 'alice_'].forEach(name => {
+				expect(isValidNamespaceName(name), `name: ${name}`).to.equal(true);
+			});
+		});
+
+		it('returns false when name starts with separator', () => {
+			['-alice', '_alice'].forEach(name => {
+				expect(isValidNamespaceName(name), `name: ${name}`).to.equal(false);
+			});
+		});
+
+		it('returns false when any character is invalid', () => {
+			['al.ce', 'alIce', 'al ce', 'al@ce', 'al#ce'].forEach(name => {
+				expect(isValidNamespaceName(name), `name: ${name}`).to.equal(false);
+			});
 		});
 	});
 
@@ -213,36 +247,6 @@ describe('idGenerator', () => {
 
 		it('rejects empty string', () => {
 			assertRejected(['']);
-		});
-	});
-
-	// endregion
-
-	// region isValidNamespaceName
-
-	describe('isValidNamespaceName', () => {
-		it('returns true when all characters are alphanumeric', () => {
-			['a', 'be', 'cat', 'doom', '09az09', 'az09az'].forEach(name => {
-				expect(isValidNamespaceName(name), `name: ${name}`).to.equal(true);
-			});
-		});
-
-		it('returns true when name contains separator', () => {
-			['al-ce', 'al_ce', 'alice-', 'alice_'].forEach(name => {
-				expect(isValidNamespaceName(name), `name: ${name}`).to.equal(true);
-			});
-		});
-
-		it('returns false when name starts with separator', () => {
-			['-alice', '_alice'].forEach(name => {
-				expect(isValidNamespaceName(name), `name: ${name}`).to.equal(false);
-			});
-		});
-
-		it('returns false when any character is invalid', () => {
-			['al.ce', 'alIce', 'al ce', 'al@ce', 'al#ce'].forEach(name => {
-				expect(isValidNamespaceName(name), `name: ${name}`).to.equal(false);
-			});
 		});
 	});
 
