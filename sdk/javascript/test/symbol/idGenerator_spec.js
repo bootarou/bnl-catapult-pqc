@@ -1,6 +1,11 @@
 import { Address } from '../../src/symbol/Network.js';
 import {
-	generateMosaicAliasId, generateMosaicId, generateNamespaceId, generateNamespacePath, isValidNamespaceName
+	generateMosaicAliasId,
+	generateMosaicId,
+	generateNamespaceId,
+	generateNamespacePath,
+	isMosaicAlias,
+	isValidNamespaceName
 } from '../../src/symbol/idGenerator.js';
 import { expect } from 'chai';
 import crypto from 'crypto';
@@ -160,6 +165,23 @@ describe('idGenerator', () => {
 
 		it('rejects empty string', () => {
 			assertRejected(['']);
+		});
+	});
+
+	// endregion
+
+	// region isMosaicAlias
+
+	describe('isMosaicAlias', () => {
+		it('only returns true when mosaic id is alias', () => {
+			// Assert: high-bit unset => false
+			expect(isMosaicAlias(0x7FFFFFFFFFFFFFFFn)).to.equal(false);
+			expect(isMosaicAlias(0x0FFFFFFFFFFFFFFFn)).to.equal(false);
+
+			// - high-bit set => true
+			expect(isMosaicAlias(0x8FFFFFFFFFFFFFFFn)).to.equal(true);
+			expect(isMosaicAlias(0xFFFFFFFFFFFFFFFFn)).to.equal(true);
+			expect(isMosaicAlias(generateMosaicAliasId('cat.token'))).to.equal(true);
 		});
 	});
 

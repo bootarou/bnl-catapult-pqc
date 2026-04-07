@@ -61,6 +61,13 @@ const generateNamespaceId = (name, parentNamespaceId = 0n) => {
 };
 
 /**
+ * Determines if mosaicId is an alias.
+ * @param {bigint} mosaicId Mosaic id to check.
+ * @returns {boolean} true if the specified mosaic id is an alias.
+ */
+const isMosaicAlias = mosaicId => 0n !== (mosaicId & NAMESPACE_FLAG);
+
+/**
  * Returns true if a name is a valid namespace name.
  * @param {string} name Namespace name to check.
  * @returns {boolean} true if the specified name is valid.
@@ -111,6 +118,7 @@ const generateMosaicAliasId = fullyQualifiedName => {
 export {
 	generateMosaicId,
 	generateNamespaceId,
+	isMosaicAlias,
 	isValidNamespaceName,
 	generateNamespacePath,
 	generateMosaicAliasId

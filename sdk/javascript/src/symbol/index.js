@@ -8,6 +8,7 @@ import {
 	generateMosaicId,
 	generateNamespaceId,
 	generateNamespacePath,
+	isMosaicAlias,
 	isValidNamespaceName
 } from './idGenerator.js';
 import {
@@ -93,6 +94,7 @@ export {
 
 	generateMosaicId,
 	generateNamespaceId,
+	isMosaicAlias,
 	isValidNamespaceName,
 	generateNamespacePath,
 	generateMosaicAliasId,
