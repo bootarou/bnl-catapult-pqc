@@ -25,6 +25,7 @@ import routeResultTypes from '../../src/routes/routeResultTypes.js';
 import routeUtils from '../../src/routes/routeUtils.js';
 import transactionRoutes from '../../src/routes/transactionRoutes.js';
 import { expect } from 'chai';
+import restifyErrors from 'restify-errors';
 import sinon from 'sinon';
 import { utils } from 'symbol-sdk';
 import { Address } from 'symbol-sdk/symbol';
@@ -84,7 +85,8 @@ describe('transaction routes', () => {
 					const req = { params: { group: TransactionGroups.confirmed, transactionId: '12345' } };
 
 					// Act + Assert:
-					expect(() => mockServer.callRoute(route, req)).to.throw('invalid length of transaction id \'12345\'');
+					expect(() => mockServer.callRoute(route, req))
+						.to.throw(restifyErrors.InvalidArgumentError, 'invalid length of transaction id \'12345\'');
 				});
 
 				it('calls parseArgument with correct parser for id', () => runParseArgumentParamTest(validObjectId, 'objectId'));
@@ -490,7 +492,8 @@ describe('transaction routes', () => {
 				const req = { params: { group: TransactionGroups.confirmed } };
 
 				// Act + Assert:
-				expect(() => mockServer.callRoute(route, req)).to.throw('either ids or hashes must be provided');
+				expect(() => mockServer.callRoute(route, req))
+					.to.throw(restifyErrors.InvalidArgumentError, 'either ids or hashes must be provided');
 			});
 
 			it('throws if both ids and hashes are provided', () => {
@@ -498,7 +501,8 @@ describe('transaction routes', () => {
 				const req = { params: { group: TransactionGroups.confirmed, transactionIds: [], hashes: [] } };
 
 				// Act + Assert:
-				expect(() => mockServer.callRoute(route, req)).to.throw('either ids or hashes must be provided');
+				expect(() => mockServer.callRoute(route, req))
+					.to.throw(restifyErrors.InvalidArgumentError, 'either ids or hashes must be provided');
 			});
 
 			describe('checks correct group is provided', () => {

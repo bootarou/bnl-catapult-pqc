@@ -92,7 +92,7 @@ export default {
 			let paramType = constants.sizes.objectId === params.transactionId.length ? 'id' : undefined;
 			paramType = constants.sizes.hash === params.transactionId.length ? 'hash' : paramType;
 			if (!paramType)
-				throw Error(`invalid length of transaction id '${params.transactionId}'`);
+				throw errors.createInvalidArgumentError(`invalid length of transaction id '${params.transactionId}'`);
 
 			const transactionId = routeUtils.parseArgument(params, 'transactionId', 'id' === paramType ? 'objectId' : 'hash256');
 
