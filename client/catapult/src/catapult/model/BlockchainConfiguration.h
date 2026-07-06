@@ -127,6 +127,11 @@ namespace catapult { namespace model {
 		/// Maximum number of transactions per block.
 		uint32_t MaxTransactionsPerBlock;
 
+		/// Height at which the chain is finalized.
+		/// After this height no new blocks are harvested or accepted, transitioning the chain to a read-only state.
+		/// \note A value of \c Height(0) disables chain finalization and preserves legacy behavior.
+		Height ChainFinalizationHeight;
+
 	public:
 		/// Fork heights configuration.
 		struct ForkHeights {

@@ -293,6 +293,34 @@ namespace catapult { namespace harvesting {
 		EXPECT_TRUE(!!pBlock);
 	}
 
+	TEST(TEST_CLASS, HarvestReturnsBlockWhenCandidateHeightDoesNotExceedChainFinalizationHeight) {
+		// Arrange: last block height is 1, so the candidate block height is 2
+		HarvesterContext context;
+		auto config = CreateConfiguration();
+		config.ChainFinalizationHeight = Height(2);
+		auto pHarvester = context.CreateHarvester(config);
+
+		// Act:
+		auto pBlock = pHarvester->harvest(context.LastBlockElement, Max_Time);
+
+		// Assert: candidate height (2) equals finalization height (2), so the block is still harvested
+		EXPECT_TRUE(!!pBlock);
+	}
+
+	TEST(TEST_CLASS, HarvestReturnsNullptrWhenCandidateHeightExceedsChainFinalizationHeight) {
+		// Arrange: last block height is 1, so the candidate block height is 2
+		HarvesterContext context;
+		auto config = CreateConfiguration();
+		config.ChainFinalizationHeight = Height(1);
+		auto pHarvester = context.CreateHarvester(config);
+
+		// Act:
+		auto pBlock = pHarvester->harvest(context.LastBlockElement, Max_Time);
+
+		// Assert: candidate height (2) exceeds finalization height (1), so harvesting is stopped
+		EXPECT_FALSE(!!pBlock);
+	}
+
 	TEST(TEST_CLASS, HarvestReturnsNullptrWhenStatisticCacheDoesNotContainInfoAtLastBlockHeight) {
 		// Arrange:
 		HarvesterContext context;

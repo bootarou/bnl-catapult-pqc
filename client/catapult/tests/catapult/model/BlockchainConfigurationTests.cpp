@@ -208,6 +208,8 @@ namespace catapult { namespace model {
 
 				EXPECT_EQ(0u, config.MaxTransactionsPerBlock);
 
+				EXPECT_EQ(Height(0), config.ChainFinalizationHeight);
+
 				EXPECT_EQ(Height(0), config.ForkHeights.TotalVotingBalanceCalculationFix);
 				EXPECT_EQ(Height(0), config.ForkHeights.TreasuryReissuance);
 				EXPECT_EQ(Height(0), config.ForkHeights.StrictAggregateTransactionHash);
@@ -267,6 +269,9 @@ namespace catapult { namespace model {
 
 				EXPECT_EQ(120u, config.MaxTransactionsPerBlock);
 
+				// chainFinalizationHeight is optional and absent from the custom bag, so it defaults to Height(0)
+				EXPECT_EQ(Height(0), config.ChainFinalizationHeight);
+
 				EXPECT_EQ(Height(998877), config.ForkHeights.TotalVotingBalanceCalculationFix);
 				EXPECT_EQ(Height(11998877), config.ForkHeights.TreasuryReissuance);
 				EXPECT_EQ(Height(22334455), config.ForkHeights.StrictAggregateTransactionHash);
@@ -304,6 +309,18 @@ namespace catapult { namespace model {
 	}
 
 	DEFINE_CONFIGURATION_TESTS(TEST_CLASS, Blockchain)
+
+	TEST(TEST_CLASS, CanLoadBlockchainConfigurationWithChainFinalizationHeight) {
+		// Arrange: add the optional chain finalization height to an otherwise complete bag
+		auto container = BlockchainConfigurationTraits::CreateProperties();
+		container["chain"].emplace_back("chainFinalizationHeight", "5000");
+
+		// Act:
+		auto config = BlockchainConfiguration::LoadFromBag(utils::ConfigurationBag(std::move(container)));
+
+		// Assert:
+		EXPECT_EQ(Height(5000), config.ChainFinalizationHeight);
+	}
 
 	TEST(TEST_CLASS, CannotLoadBlockchainConfigurationWithInvalidNetwork) {
 		// Arrange: set an unknown network in the container

@@ -88,6 +88,13 @@ namespace catapult { namespace harvesting {
 
 	std::unique_ptr<model::Block> Harvester::harvest(const model::BlockElement& lastBlockElement, Timestamp timestamp) {
 		NextBlockContext context(lastBlockElement, timestamp);
+
+		// stop harvesting once the chain has been finalized (Height(0) disables finalization)
+		if (Height(0) != m_config.ChainFinalizationHeight && context.Height > m_config.ChainFinalizationHeight) {
+			CATAPULT_LOG(debug) << "skipping harvest attempt because chain is finalized at height " << m_config.ChainFinalizationHeight;
+			return nullptr;
+		}
+
 		if (!context.tryCalculateDifficulty(m_cache.sub<cache::BlockStatisticCache>(), m_config)) {
 			CATAPULT_LOG(debug) << "skipping harvest attempt due to error calculating difficulty";
 			return nullptr;

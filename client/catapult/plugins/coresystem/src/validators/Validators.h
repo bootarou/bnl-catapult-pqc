@@ -79,6 +79,11 @@ namespace catapult { namespace validators {
 	/// - the block does not contain more than \a maxTransactions transactions
 	DECLARE_STATELESS_VALIDATOR(MaxTransactions, model::BlockNotification)(uint32_t maxTransactions);
 
+	/// Validator that applies to all block notifications and validates that:
+	/// - the block height does not exceed \a chainFinalizationHeight when chain finalization is enabled
+	/// \note A \a chainFinalizationHeight of \c Height(0) disables chain finalization.
+	DECLARE_STATEFUL_VALIDATOR(ChainFinalization, model::BlockNotification)(Height chainFinalizationHeight);
+
 	/// Validator that applies to all importance block notifications and validates that:
 	/// - notification values match calculated values (excluding PreviousImportanceBlockHash, which is validated separately)
 	/// - voting statistics are calculated more accurately for blocks at and after \a totalVotingBalanceCalculationFixForkHeight

@@ -196,6 +196,7 @@ namespace catapult { namespace plugins {
 						config.ForkHeights.TreasuryReissuance,
 						config.TreasuryReissuanceTransactionSignatures))
 				.add(validators::CreateEligibleHarvesterValidator())
+				.add(validators::CreateChainFinalizationValidator(config.ChainFinalizationHeight))
 				.add(validators::CreateBalanceDebitValidator())
 				.add(validators::CreateBalanceTransferValidator())
 				.add(validators::CreateImportanceBlockValidator(

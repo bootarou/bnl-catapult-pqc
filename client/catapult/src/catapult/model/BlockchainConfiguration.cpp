@@ -147,6 +147,15 @@ namespace catapult { namespace model {
 
 		LOAD_CHAIN_PROPERTY(MaxTransactionsPerBlock);
 
+		// ChainFinalizationHeight is optional in order to preserve backwards compatibility with existing configurations;
+		// when absent it defaults to Height(0), which disables chain finalization
+		size_t numOptionalChainProperties = 0;
+		config.ChainFinalizationHeight = Height(0);
+		if (bag.contains(utils::ConfigurationKey("chain", "chainFinalizationHeight"))) {
+			LOAD_CHAIN_PROPERTY(ChainFinalizationHeight);
+			++numOptionalChainProperties;
+		}
+
 #undef LOAD_CHAIN_PROPERTY
 
 #define LOAD_FORK_HEIGHT_PROPERTY(NAME) utils::LoadIniProperty(bag, "fork_heights", #NAME, config.ForkHeights.NAME)
@@ -165,7 +174,7 @@ namespace catapult { namespace model {
 		numAdditionalKeys += ParseHashMapSection(bag, config.KnownCorruptAggregateTransactionHashesMap);
 		numAdditionalKeys += ParsePluginSections(bag, config.Plugins);
 
-		utils::VerifyBagSizeExact(bag, 5 + 28 + 7 + numAdditionalKeys);
+		utils::VerifyBagSizeExact(bag, 5 + 28 + numOptionalChainProperties + 7 + numAdditionalKeys);
 		return config;
 	}
 
