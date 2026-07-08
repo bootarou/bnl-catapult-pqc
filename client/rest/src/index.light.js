@@ -26,9 +26,17 @@ import bootstrapper from './server/bootstrapper.js';
 import formatters from './server/formatters.js';
 import messageFormattingRules from './server/messageFormattingRules.js';
 import runProcess from './server/process.js';
-import sshpk from 'sshpk';
 import winston from 'winston';
+import crypto from 'crypto';
 import fs from 'fs';
+
+// ML-DSA-44 (FIPS 204) public key size; sshpk cannot parse ML-DSA keys, so the raw public key
+// is extracted from the SPKI DER tail using node's native crypto (backed by openssl 3.5+).
+const Ml_Dsa_44_Public_Key_Size = 1312;
+const extractNodePublicKey = keyPem => {
+	const spkiDer = crypto.createPublicKey(crypto.createPrivateKey(keyPem)).export({ format: 'der', type: 'spki' });
+	return Uint8Array.prototype.slice.call(spkiDer, spkiDer.length - Ml_Dsa_44_Public_Key_Size);
+};
 
 const createServer = config => {
 	const modelSystem = catapult.plugins.catapultModelSystem.configure([], {
@@ -66,8 +74,7 @@ const registerRoutes = (server, db, services) => {
 			key: fs.readFileSync(config.apiNode.tlsClientKeyPath),
 			caCertificate: fs.readFileSync(config.apiNode.tlsCaCertificatePath)
 		};
-		const nodeCertKey = sshpk.parsePrivateKey(config.apiNode.key);
-		config.apiNode.nodePublicKey = nodeCertKey.toPublic().part.A.data;
+		config.apiNode.nodePublicKey = extractNodePublicKey(config.apiNode.key);
 
 		winston.info('registering routes');
 		const server = createServer(config);

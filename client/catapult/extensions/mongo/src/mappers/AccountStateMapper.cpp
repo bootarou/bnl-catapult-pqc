@@ -34,12 +34,13 @@ namespace catapult { namespace mongo { namespace mappers {
 			bsoncxx::v_noabi::builder::stream::key_context<bsoncxx::v_noabi::builder::stream::closed_context>
 		>;
 
+		template<typename TAccountPublicKey>
 		void StreamPublicKey(
 				bson_subdocument& builder,
 				const std::string& name,
 				PublicKeyType mask,
 				PublicKeyType keyType,
-				const state::AccountPublicKeys::PublicKeyAccessor<Key>& publicKeyAccessor) {
+				const state::AccountPublicKeys::PublicKeyAccessor<TAccountPublicKey>& publicKeyAccessor) {
 			if (!HasFlag(keyType, mask))
 				return;
 
