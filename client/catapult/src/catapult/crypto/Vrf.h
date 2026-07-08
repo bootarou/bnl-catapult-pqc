@@ -55,10 +55,10 @@ namespace catapult { namespace crypto {
 #pragma pack(pop)
 
 	/// Generates a verifiable random function proof from \a alpha and \a keyPair.
-	VrfProof GenerateVrfProof(const RawBuffer& alpha, const KeyPair& keyPair);
+	VrfProof GenerateVrfProof(const RawBuffer& alpha, const VrfKeyPair& keyPair);
 
 	/// Verifies verifiable random function proof (\a vrfProof) using \a alpha and \a publicKey.
-	Hash512 VerifyVrfProof(const VrfProof& vrfProof, const RawBuffer& alpha, const Key& publicKey);
+	Hash512 VerifyVrfProof(const VrfProof& vrfProof, const RawBuffer& alpha, const VrfPublicKey& publicKey);
 
 	/// Generates a verifiable random function proof hash from \a gamma.
 	Hash512 GenerateVrfProofHash(const ProofGamma& gamma);

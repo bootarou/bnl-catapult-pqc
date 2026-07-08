@@ -31,14 +31,14 @@ namespace catapult { namespace harvesting {
 		BlockGeneratorAccountDescriptor();
 
 		/// Creates descriptor around \a signingKeyPair and \a vrfKeyPair.
-		BlockGeneratorAccountDescriptor(crypto::KeyPair&& signingKeyPair, crypto::KeyPair&& vrfKeyPair);
+		BlockGeneratorAccountDescriptor(crypto::KeyPair&& signingKeyPair, crypto::VrfKeyPair&& vrfKeyPair);
 
 	public:
 		/// Gets the signing key pair.
 		const crypto::KeyPair& signingKeyPair() const;
 
 		/// Gets the vrf key pair.
-		const crypto::KeyPair& vrfKeyPair() const;
+		const crypto::VrfKeyPair& vrfKeyPair() const;
 
 	public:
 		/// Returns \c true if this descriptor is equal to \a rhs.
@@ -49,6 +49,6 @@ namespace catapult { namespace harvesting {
 
 	private:
 		crypto::KeyPair m_signingKeyPair;
-		crypto::KeyPair m_vrfKeyPair;
+		crypto::VrfKeyPair m_vrfKeyPair;
 	};
 }}

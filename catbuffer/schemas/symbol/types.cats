@@ -91,16 +91,21 @@ using Hash512 = binary_fixed(64)
 #
 # It serves as the public identifier of the [key pair](/concepts/cryptography.html#key-pair)
 # and can be disseminated widely. It is used to prove that an entity was signed with the paired private key.
-using PublicKey = binary_fixed(32)
+#
+# Symbol currently uses [ML-DSA-44](https://csrc.nist.gov/pubs/fips/204/final) (FIPS 204) public keys.
+using PublicKey = binary_fixed(1312)
+
+# An Ed25519 public key used exclusively for the (pre-quantum) VRF scheme.
+using VrfPublicKey = binary_fixed(32)
 
 # A PublicKey used for voting during the
 # [finalization process](/concepts/block.html#finalization).
 using VotingPublicKey = binary_fixed(32)
 
-# A 64-byte (512 bit) array certifying that the signed data has not been modified.
+# A byte array certifying that the signed data has not been modified.
 #
-# Symbol currently uses [Ed25519](https://ed25519.cr.yp.to/) signatures.
-using Signature = binary_fixed(64)
+# Symbol currently uses [ML-DSA-44](https://csrc.nist.gov/pubs/fips/204/final) (FIPS 204) signatures.
+using Signature = binary_fixed(2420)
 
 # A quantity of a certain mosaic.
 struct Mosaic

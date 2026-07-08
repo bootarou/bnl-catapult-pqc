@@ -28,8 +28,9 @@ namespace catapult { namespace crypto {
 	struct PrivateKey_tag { static constexpr size_t Size = 32; };
 	using PrivateKey = SecureByteArray<PrivateKey_tag>;
 
-	/// ED25519 key pair traits.
-	struct Ed25519KeyPairTraits {
+	/// ML-DSA-44 (FIPS 204) key pair traits.
+	/// \note The private key is the 32-byte ML-DSA seed; key expansion is deterministic.
+	struct MlDsaKeyPairTraits {
 	public:
 		using PublicKey = Key;
 		using PrivateKey = crypto::PrivateKey;
@@ -39,14 +40,29 @@ namespace catapult { namespace crypto {
 		static void ExtractPublicKeyFromPrivateKey(const PrivateKey& privateKey, PublicKey& publicKey);
 	};
 
-	/// ED25519 key pair.
+	/// ML-DSA-44 key pair.
 	/// \note This type does not have a prefix because it's the default signature scheme used in catapult.
-	using KeyPair = BasicKeyPair<Ed25519KeyPairTraits>;
+	using KeyPair = BasicKeyPair<MlDsaKeyPairTraits>;
 
-	/// ED25519 utils.
-	struct Ed25519Utils {
+	/// ED25519 key pair traits used exclusively for the (pre-quantum) VRF scheme.
+	struct VrfKeyPairTraits {
+	public:
+		using PublicKey = VrfPublicKey;
+		using PrivateKey = crypto::PrivateKey;
+
+	public:
+		/// Extracts a public key (\a publicKey) from a private key (\a privateKey).
+		static void ExtractPublicKeyFromPrivateKey(const PrivateKey& privateKey, PublicKey& publicKey);
+	};
+
+	/// ED25519 key pair used exclusively for the (pre-quantum) VRF scheme.
+	using VrfKeyPair = BasicKeyPair<VrfKeyPairTraits>;
+
+	/// Private key utils.
+	struct PrivateKeyUtils {
 		/// Formats a private \a key for printing.
-		static utils::ContainerHexFormatter<Key::const_iterator> FormatPrivateKey(const PrivateKey& key);
+		static utils::ContainerHexFormatter<std::array<uint8_t, PrivateKey::Size>::const_iterator> FormatPrivateKey(
+				const PrivateKey& key);
 
 		/// Returns \c true if \a str represents a valid private key, \c false otherwise.
 		static bool IsValidPrivateKeyString(const std::string& str);

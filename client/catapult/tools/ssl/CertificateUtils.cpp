@@ -30,6 +30,8 @@
 #pragma clang diagnostic ignored "-Wreserved-id-macro"
 #endif
 #include <openssl/bio.h>
+#include <openssl/core_names.h>
+#include <openssl/param_build.h>
 #include <openssl/dh.h>
 #include <openssl/pem.h>
 #include <openssl/x509.h>
@@ -42,21 +44,37 @@ namespace catapult { namespace tools { namespace ssl {
 	// region key utils
 
 	namespace {
+		std::shared_ptr<EVP_PKEY> CreateMlDsaKeyFromParams(const OSSL_PARAM* pParams, int selection) {
+			auto pCtx = std::shared_ptr<EVP_PKEY_CTX>(
+					EVP_PKEY_CTX_new_from_name(nullptr, "ML-DSA-44", nullptr),
+					EVP_PKEY_CTX_free);
+			if (!pCtx || EVP_PKEY_fromdata_init(pCtx.get()) <= 0)
+				return nullptr;
+
+			EVP_PKEY* pRawKey = nullptr;
+			if (EVP_PKEY_fromdata(pCtx.get(), &pRawKey, selection, const_cast<OSSL_PARAM*>(pParams)) <= 0)
+				return nullptr;
+
+			return std::shared_ptr<EVP_PKEY>(pRawKey, EVP_PKEY_free);
+		}
+
 		std::shared_ptr<EVP_PKEY> GenerateCertificateKey(const crypto::KeyPair& keyPair) {
 			auto i = 0u;
-			Key rawPrivateKey;
+			std::array<uint8_t, crypto::PrivateKey::Size> rawSeed;
 			for (auto byte : keyPair.privateKey())
-				rawPrivateKey[i++] = byte;
+				rawSeed[i++] = byte;
 
-			return std::shared_ptr<EVP_PKEY>(
-					EVP_PKEY_new_raw_private_key(EVP_PKEY_ED25519, nullptr, rawPrivateKey.data(), rawPrivateKey.size()),
-					EVP_PKEY_free);
+			auto pBld = std::shared_ptr<OSSL_PARAM_BLD>(OSSL_PARAM_BLD_new(), OSSL_PARAM_BLD_free);
+			OSSL_PARAM_BLD_push_octet_string(pBld.get(), OSSL_PKEY_PARAM_ML_DSA_SEED, rawSeed.data(), rawSeed.size());
+			auto pParams = std::shared_ptr<OSSL_PARAM>(OSSL_PARAM_BLD_to_param(pBld.get()), OSSL_PARAM_free);
+			return CreateMlDsaKeyFromParams(pParams.get(), EVP_PKEY_KEYPAIR);
 		}
 
 		std::shared_ptr<EVP_PKEY> GenerateCertificatePublicKey(const Key& publicKey) {
-			return std::shared_ptr<EVP_PKEY>(
-					EVP_PKEY_new_raw_public_key(EVP_PKEY_ED25519, nullptr, publicKey.data(), publicKey.size()),
-					EVP_PKEY_free);
+			auto pBld = std::shared_ptr<OSSL_PARAM_BLD>(OSSL_PARAM_BLD_new(), OSSL_PARAM_BLD_free);
+			OSSL_PARAM_BLD_push_octet_string(pBld.get(), OSSL_PKEY_PARAM_PUB_KEY, publicKey.data(), publicKey.size());
+			auto pParams = std::shared_ptr<OSSL_PARAM>(OSSL_PARAM_BLD_to_param(pBld.get()), OSSL_PARAM_free);
+			return CreateMlDsaKeyFromParams(pParams.get(), EVP_PKEY_PUBLIC_KEY);
 		}
 
 		struct BioWrapper {

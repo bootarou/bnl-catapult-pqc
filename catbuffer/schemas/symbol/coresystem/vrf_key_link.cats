@@ -3,7 +3,7 @@ import "transaction.cats"
 # Shared content between VrfKeyLinkTransaction and EmbeddedVrfKeyLinkTransaction.
 inline struct VrfKeyLinkTransactionBody
 	# Linked VRF public key.
-	linked_public_key = PublicKey
+	linked_public_key = VrfPublicKey
 
 	# Account link action.
 	link_action = LinkAction

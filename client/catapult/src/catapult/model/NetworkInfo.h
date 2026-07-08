@@ -33,12 +33,14 @@ namespace catapult { namespace model {
 		NetworkInfo();
 
 		/// Creates a network info around network \a identifier, node equality strategy (\a nodeEqualityStrategy),
-		/// nemesis signer public key (\a nemesisSignerPublicKey), nemesis generation hash seed (\a generationHashSeed)
+		/// nemesis signer public key (\a nemesisSignerPublicKey), nemesis signer vrf public key
+		/// (\a nemesisSignerVrfPublicKey), nemesis generation hash seed (\a generationHashSeed)
 		/// and nemesis epoch time adjustment (\a epochAdjustment).
 		NetworkInfo(
 				NetworkIdentifier identifier,
 				NodeIdentityEqualityStrategy nodeEqualityStrategy,
 				const Key& nemesisSignerPublicKey,
+				const VrfPublicKey& nemesisSignerVrfPublicKey,
 				const catapult::GenerationHashSeed& generationHashSeed,
 				const utils::TimeSpan& epochAdjustment);
 
@@ -51,6 +53,9 @@ namespace catapult { namespace model {
 
 		/// Nemesis public key.
 		Key NemesisSignerPublicKey;
+
+		/// Nemesis vrf public key used to verify the nemesis generation hash proof.
+		VrfPublicKey NemesisSignerVrfPublicKey;
 
 		/// Nemesis generation hash seed.
 		catapult::GenerationHashSeed GenerationHashSeed;

@@ -20,28 +20,21 @@
 **/
 
 #pragma once
-#include "SharedKey.h"
+#include "KeyPair.h"
+#include <vector>
 
 namespace catapult { namespace crypto {
 
-	/// AES 256 GCM decryptor.
-	class AesGcm256 {
-	public:
-		struct IV_tag { static constexpr size_t Size = 12; };
-		using IV = utils::ByteArray<IV_tag>;
+	/// ML-DSA-44 (FIPS 204) primitives implemented via openssl.
+	/// \note The 32-byte PrivateKey is the ML-DSA seed (xi); key expansion is deterministic.
 
-		struct Tag_tag { static constexpr size_t Size = 16; };
-		using Tag = utils::ByteArray<Tag_tag>;
+	/// Extracts an ML-DSA-44 public key (\a publicKey) from a seed (\a privateKey).
+	void ExtractMlDsaPublicKey(const PrivateKey& privateKey, Key& publicKey);
 
-	public:
-		/// Decrypts \a input to \a output with \a key.
-		static bool TryDecrypt(const SharedKey& key, const RawBuffer& input, std::vector<uint8_t>& output);
-	};
+	/// Signs data in \a buffersList using seed (\a privateKey), placing the result in \a computedSignature.
+	/// \note Signing is deterministic in order to keep block/nemesis generation reproducible.
+	void MlDsaSign(const PrivateKey& privateKey, std::initializer_list<const RawBuffer> buffersList, Signature& computedSignature);
 
-	/// Extracts the ML-KEM ciphertext from \a ciphertextPrefixedEncryptedPayload, decapsulates it with \a keyPair
-	/// and decrypts the rest to \a decrypted.
-	bool TryDecryptMlKemBlockCipher(
-			const RawBuffer& ciphertextPrefixedEncryptedPayload,
-			const MlKemKeyPair& keyPair,
-			std::vector<uint8_t>& decrypted);
+	/// Verifies that \a signature of data in \a buffers is valid, using public key \a publicKey.
+	bool MlDsaVerify(const Key& publicKey, const std::vector<RawBuffer>& buffers, const Signature& signature);
 }}

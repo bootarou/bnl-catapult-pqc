@@ -144,7 +144,7 @@ namespace catapult { namespace harvesting {
 	}
 
 	void UnlockedAccountsStorage::load(
-			const crypto::KeyPair& encryptionKeyPair,
+			const crypto::MlKemKeyPair& encryptionKeyPair,
 			const consumer<BlockGeneratorAccountDescriptor&&>& processDescriptor) {
 		if (!std::filesystem::exists(m_filename))
 			return;

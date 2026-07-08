@@ -29,6 +29,7 @@
 #pragma clang diagnostic ignored "-Wreserved-id-macro"
 #endif
 #include <openssl/bio.h>
+#include <openssl/core_names.h>
 #include <openssl/evp.h>
 #include <openssl/x509.h>
 #ifdef __clang__
@@ -102,11 +103,17 @@ namespace catapult { namespace crypto {
 		if (!pCertificatePublicKey)
 			return false;
 
-		if (EVP_PKEY_ED25519 != EVP_PKEY_id(pCertificatePublicKey))
+		if (!EVP_PKEY_is_a(pCertificatePublicKey, "ML-DSA-44"))
 			return false;
 
-		auto keySize = certificateInfo.PublicKey.size();
-		return EVP_PKEY_get_raw_public_key(pCertificatePublicKey, certificateInfo.PublicKey.data(), &keySize) && Key::Size == keySize;
+		size_t keySize = 0;
+		auto result = EVP_PKEY_get_octet_string_param(
+				pCertificatePublicKey,
+				OSSL_PKEY_PARAM_PUB_KEY,
+				certificateInfo.PublicKey.data(),
+				certificateInfo.PublicKey.size(),
+				&keySize);
+		return result && Key::Size == keySize;
 	}
 
 	namespace {

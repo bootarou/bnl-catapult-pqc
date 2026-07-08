@@ -29,14 +29,20 @@ namespace catapult {
 
 	// region byte arrays (ex address)
 
-	struct Signature_tag { static constexpr size_t Size = 64; };
+	// ML-DSA-44 (FIPS 204) signature
+	struct Signature_tag { static constexpr size_t Size = 2420; };
 	using Signature = utils::ByteArray<Signature_tag>;
 
-	struct Key_tag { static constexpr size_t Size = 32; };
+	// ML-DSA-44 (FIPS 204) public key
+	struct Key_tag { static constexpr size_t Size = 1312; };
 	using Key = utils::ByteArray<Key_tag>;
 
 	struct VotingKey_tag { static constexpr size_t Size = 32; };
 	using VotingKey = utils::ByteArray<VotingKey_tag>;
+
+	// ed25519 public key used exclusively for the (pre-quantum) VRF scheme
+	struct VrfPublicKey_tag { static constexpr size_t Size = 32; };
+	using VrfPublicKey = utils::ByteArray<VrfPublicKey_tag>;
 
 	struct Hash512_tag { static constexpr size_t Size = 64; };
 	using Hash512 = utils::ByteArray<Hash512_tag>;

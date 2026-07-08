@@ -167,8 +167,8 @@ namespace catapult { namespace consumers {
 			}
 
 		private:
-			static Key GetVrfPublicKey(const cache::ReadOnlyAccountStateCache& accountStateCache, const Address& blockHarvester) {
-				Key vrfPublicKey;
+			static VrfPublicKey GetVrfPublicKey(const cache::ReadOnlyAccountStateCache& accountStateCache, const Address& blockHarvester) {
+				VrfPublicKey vrfPublicKey;
 				cache::ProcessForwardedAccountState(accountStateCache, blockHarvester, [&vrfPublicKey](const auto& accountState) {
 					vrfPublicKey = state::GetVrfPublicKey(accountState);
 				});

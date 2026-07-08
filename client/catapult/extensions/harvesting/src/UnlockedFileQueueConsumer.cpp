@@ -36,26 +36,26 @@ namespace catapult { namespace harvesting {
 
 	std::pair<BlockGeneratorAccountDescriptor, bool> TryDecryptBlockGeneratorAccountDescriptor(
 			const RawBuffer& publicKeyPrefixedEncryptedPayload,
-			const crypto::KeyPair& encryptionKeyPair) {
+			const crypto::MlKemKeyPair& encryptionKeyPair) {
 		std::vector<uint8_t> decrypted;
-		auto isDecryptSuccessful = crypto::TryDecryptEd25199BlockCipher(publicKeyPrefixedEncryptedPayload, encryptionKeyPair, decrypted);
+		auto isDecryptSuccessful = crypto::TryDecryptMlKemBlockCipher(publicKeyPrefixedEncryptedPayload, encryptionKeyPair, decrypted);
 		if (!isDecryptSuccessful || HarvestRequest::DecryptedPayloadSize() != decrypted.size())
 			return std::make_pair(BlockGeneratorAccountDescriptor(), false);
 
 		auto iter = decrypted.begin();
-		auto extractKeyPair = [&iter]() {
-			return crypto::KeyPair::FromPrivate(crypto::PrivateKey::Generate([&iter]() mutable { return *iter++; }));
+		auto extractPrivateKey = [&iter]() {
+			return crypto::PrivateKey::Generate([&iter]() mutable { return *iter++; });
 		};
 
-		auto signingKeyPair = extractKeyPair();
-		auto vrfKeyPair = extractKeyPair();
+		auto signingKeyPair = crypto::KeyPair::FromPrivate(extractPrivateKey());
+		auto vrfKeyPair = crypto::VrfKeyPair::FromPrivate(extractPrivateKey());
 		return std::make_pair(BlockGeneratorAccountDescriptor(std::move(signingKeyPair), std::move(vrfKeyPair)), true);
 	}
 
 	void UnlockedFileQueueConsumer(
 			const config::CatapultDirectory& directory,
 			Height maxHeight,
-			const crypto::KeyPair& encryptionKeyPair,
+			const crypto::MlKemKeyPair& encryptionKeyPair,
 			const consumer<const HarvestRequest&, BlockGeneratorAccountDescriptor&&>& processDescriptor) {
 		io::FileQueueReader reader(directory.str());
 		auto appendMessage = [maxHeight, &encryptionKeyPair, &processDescriptor](const auto& buffer) {

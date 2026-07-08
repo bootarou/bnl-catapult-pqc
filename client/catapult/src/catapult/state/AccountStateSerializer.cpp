@@ -194,8 +194,9 @@ namespace catapult { namespace state {
 	}
 
 	namespace {
-		void ReadSupplementalPublicKey(io::InputStream& input, AccountPublicKeys::PublicKeyAccessor<Key>& publicKeyAccessor) {
-			Key key;
+		template<typename TAccountPublicKey>
+		void ReadSupplementalPublicKey(io::InputStream& input, AccountPublicKeys::PublicKeyAccessor<TAccountPublicKey>& publicKeyAccessor) {
+			TAccountPublicKey key;
 			input.read(key);
 			publicKeyAccessor.set(key);
 		}

@@ -102,6 +102,7 @@ namespace catapult { namespace model {
 		LOAD_NETWORK_PROPERTY(Identifier);
 		LOAD_NETWORK_PROPERTY(NodeEqualityStrategy);
 		LOAD_NETWORK_PROPERTY(NemesisSignerPublicKey);
+		LOAD_NETWORK_PROPERTY(NemesisSignerVrfPublicKey);
 		LOAD_NETWORK_PROPERTY(GenerationHashSeed);
 		LOAD_NETWORK_PROPERTY(EpochAdjustment);
 
@@ -174,7 +175,7 @@ namespace catapult { namespace model {
 		numAdditionalKeys += ParseHashMapSection(bag, config.KnownCorruptAggregateTransactionHashesMap);
 		numAdditionalKeys += ParsePluginSections(bag, config.Plugins);
 
-		utils::VerifyBagSizeExact(bag, 5 + 28 + numOptionalChainProperties + 7 + numAdditionalKeys);
+		utils::VerifyBagSizeExact(bag, 6 + 28 + numOptionalChainProperties + 7 + numAdditionalKeys);
 		return config;
 	}
 

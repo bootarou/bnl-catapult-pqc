@@ -20,7 +20,7 @@
 **/
 
 #include "VotingSigner.h"
-#include "catapult/crypto/Signer.h"
+#include "catapult/crypto/Ed25519Signer.h"
 
 namespace catapult { namespace crypto {
 
@@ -29,9 +29,10 @@ namespace catapult { namespace crypto {
 	}
 
 	void Sign(const VotingKeyPair& keyPair, std::initializer_list<const RawBuffer> buffersList, VotingSignature& computedSignature) {
-		Signature ed25519Signature;
-		auto ed25519KeyPair = KeyPair::FromPrivate(PrivateKey::FromBuffer(keyPair.privateKey()));
-		Sign(ed25519KeyPair, buffersList, ed25519Signature);
+		Ed25519Signature ed25519Signature;
+		auto ed25519PrivateKey = PrivateKey::FromBuffer(keyPair.privateKey());
+		auto ed25519PublicKey = keyPair.publicKey().copyTo<VrfPublicKey>();
+		SignEd25519(ed25519PrivateKey, ed25519PublicKey, buffersList, ed25519Signature);
 
 		computedSignature = ed25519Signature.copyTo<VotingSignature>();
 	}
@@ -41,8 +42,8 @@ namespace catapult { namespace crypto {
 	}
 
 	bool Verify(const VotingKey& publicKey, const std::vector<RawBuffer>& buffersList, const VotingSignature& signature) {
-		auto ed25519PublicKey = publicKey.copyTo<Key>();
-		auto ed25519Signature = signature.copyTo<Signature>();
-		return Verify(ed25519PublicKey, buffersList, ed25519Signature);
+		auto ed25519PublicKey = publicKey.copyTo<VrfPublicKey>();
+		auto ed25519Signature = signature.copyTo<Ed25519Signature>();
+		return VerifyEd25519(ed25519PublicKey, buffersList, ed25519Signature);
 	}
 }}

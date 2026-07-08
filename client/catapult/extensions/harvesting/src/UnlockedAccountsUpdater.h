@@ -21,6 +21,7 @@
 
 #pragma once
 #include "UnlockedAccountsStorage.h"
+#include "catapult/crypto/SharedKey.h"
 #include "catapult/config/CatapultDataDirectory.h"
 
 namespace catapult {
@@ -54,6 +55,7 @@ namespace catapult { namespace harvesting {
 		UnlockedAccounts& m_unlockedAccounts;
 		Key m_signingPublicKey;
 		const crypto::KeyPair& m_encryptionKeyPair;
+		crypto::MlKemKeyPair m_kemKeyPair;
 		config::CatapultDataDirectory m_dataDirectory;
 		std::string m_harvestersFilename;
 		UnlockedAccountsStorage m_unlockedAccountsStorage;

@@ -33,7 +33,7 @@ namespace catapult { namespace harvesting {
 			: BlockGeneratorAccountDescriptor(CreateZeroKeyPair(), CreateZeroKeyPair())
 	{}
 
-	BlockGeneratorAccountDescriptor::BlockGeneratorAccountDescriptor(crypto::KeyPair&& signingKeyPair, crypto::KeyPair&& vrfKeyPair)
+	BlockGeneratorAccountDescriptor::BlockGeneratorAccountDescriptor(crypto::KeyPair&& signingKeyPair, crypto::VrfKeyPair&& vrfKeyPair)
 			: m_signingKeyPair(std::move(signingKeyPair))
 			, m_vrfKeyPair(std::move(vrfKeyPair))
 	{}
@@ -42,7 +42,7 @@ namespace catapult { namespace harvesting {
 		return m_signingKeyPair;
 	}
 
-	const crypto::KeyPair& BlockGeneratorAccountDescriptor::vrfKeyPair() const {
+	const crypto::VrfKeyPair& BlockGeneratorAccountDescriptor::vrfKeyPair() const {
 		return m_vrfKeyPair;
 	}
 

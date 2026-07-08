@@ -20,27 +20,37 @@
 **/
 
 #include "KeyPair.h"
-#include <donna/catapult.h>
+#include "Ed25519Signer.h"
+#include "MlDsa.h"
 
 namespace catapult { namespace crypto {
 
-	// region Ed25519KeyPairTraits
+	// region MlDsaKeyPairTraits
 
-	void Ed25519KeyPairTraits::ExtractPublicKeyFromPrivateKey(const PrivateKey& privateKey, PublicKey& publicKey) {
-		ed25519_publickey(privateKey.data(), publicKey.data());
+	void MlDsaKeyPairTraits::ExtractPublicKeyFromPrivateKey(const PrivateKey& privateKey, PublicKey& publicKey) {
+		ExtractMlDsaPublicKey(privateKey, publicKey);
 	}
 
 	// endregion
 
-	// region Ed25519Utils
+	// region VrfKeyPairTraits
 
-	utils::ContainerHexFormatter<Key::const_iterator> Ed25519Utils::FormatPrivateKey(const PrivateKey& key) {
+	void VrfKeyPairTraits::ExtractPublicKeyFromPrivateKey(const PrivateKey& privateKey, PublicKey& publicKey) {
+		ExtractEd25519PublicKey(privateKey, publicKey);
+	}
+
+	// endregion
+
+	// region PrivateKeyUtils
+
+	utils::ContainerHexFormatter<std::array<uint8_t, PrivateKey::Size>::const_iterator> PrivateKeyUtils::FormatPrivateKey(
+			const PrivateKey& key) {
 		return utils::HexFormat(key.begin(), key.end());
 	}
 
-	bool Ed25519Utils::IsValidPrivateKeyString(const std::string& str) {
-		Key key;
-		return utils::TryParseHexStringIntoContainer(str.data(), str.size(), key);
+	bool PrivateKeyUtils::IsValidPrivateKeyString(const std::string& str) {
+		std::array<uint8_t, PrivateKey::Size> keyBuffer;
+		return utils::TryParseHexStringIntoContainer(str.data(), str.size(), keyBuffer);
 	}
 
 	// endregion

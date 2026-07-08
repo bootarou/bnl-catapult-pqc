@@ -21,6 +21,7 @@
 
 #include "Vrf.h"
 #include "CryptoUtils.h"
+#include "Ed25519Signer.h"
 #include "Hashes.h"
 #include "SecureZero.h"
 #include <donna/catapult.h>
@@ -28,7 +29,7 @@
 namespace catapult { namespace crypto {
 
 	namespace {
-		bool ge25519_unpack_positive_vartime(ge25519& A, const Key& publicKey) {
+		bool ge25519_unpack_positive_vartime(ge25519& A, const VrfPublicKey& publicKey) {
 			// unpack public key
 			if (!ge25519_unpack_negative_vartime(&A, publicKey.data()))
 				return false;
@@ -40,17 +41,17 @@ namespace catapult { namespace crypto {
 			return true;
 		}
 
-		Key ScalarMultEight(const Key& key) {
+		VrfPublicKey ScalarMultEight(const VrfPublicKey& key) {
 			ge25519 A;
 			if (!ge25519_unpack_positive_vartime(A, key))
-				return Key();
+				return VrfPublicKey();
 
 			ge25519 B;
 			ge25519_double(&B, &A);
 			ge25519_double(&A, &B);
 			ge25519_double(&B, &A);
 
-			Key keyTimesEight;
+			VrfPublicKey keyTimesEight;
 			ge25519_pack(keyTimesEight.data(), &B);
 			return keyTimesEight;
 		}
@@ -75,26 +76,26 @@ namespace catapult { namespace crypto {
 			return hash;
 		}
 
-		Key MapToKey(const RawBuffer& alpha, const Key& publicKey) {
+		VrfPublicKey MapToKey(const RawBuffer& alpha, const VrfPublicKey& publicKey) {
 			uint8_t i = 0;
 			ge25519 A;
 			while (true) {
 				// Hash(suite | action | publicKey | alpha | i)
 				auto hash = IetfHash(0x03, 0x01, { publicKey, alpha, { &i, 1 } });
-				auto key = hash.copyTo<Key>();
+				auto key = hash.copyTo<VrfPublicKey>();
 				if (UnpackNegative(A, key))
 					return ScalarMultEight(key);
 
 				++i;
 				if (0u == i)
-					return Key();
+					return VrfPublicKey();
 			}
 		}
 
-		Key DoubleScalarMultVarTime(const ScalarMultiplier& encodedS, const Key& publicKey, const ScalarMultiplier& encodedC) {
+		VrfPublicKey DoubleScalarMultVarTime(const ScalarMultiplier& encodedS, const VrfPublicKey& publicKey, const ScalarMultiplier& encodedC) {
 			ge25519 A;
 			if (!UnpackNegativeAndCheckSubgroup(A, publicKey))
-				return Key();
+				return VrfPublicKey();
 
 			bignum256modm S;
 			expand256_modm(S, encodedS, 32);
@@ -105,12 +106,12 @@ namespace catapult { namespace crypto {
 			ge25519 ALIGN(16) R;
 			ge25519_double_scalarmult_vartime(&R, &A, C, S);
 
-			Key packedR;
+			VrfPublicKey packedR;
 			ge25519_pack(packedR.data(), &R);
 			return packedR;
 		}
 
-		ProofVerificationHash VrfC(const Key& h, const Key& gamma, const Key& k_times_B, const Key& k_times_h) {
+		ProofVerificationHash VrfC(const VrfPublicKey& h, const VrfPublicKey& gamma, const VrfPublicKey& k_times_B, const VrfPublicKey& k_times_h) {
 			auto hash = IetfHash(0x03, 0x02, { h, gamma, k_times_B, k_times_h });
 
 			ProofVerificationHash c;
@@ -140,27 +141,27 @@ namespace catapult { namespace crypto {
 		}
 	}
 
-	VrfProof GenerateVrfProof(const RawBuffer& alpha, const KeyPair& keyPair) {
+	VrfProof GenerateVrfProof(const RawBuffer& alpha, const VrfKeyPair& keyPair) {
 		// map to group element
 		auto h = MapToKey(alpha, keyPair.publicKey());
-		if (Key() == h)
+		if (VrfPublicKey() == h)
 			return VrfProof();
 
 		// gamma = x * h
-		auto gamma = DeriveSharedSecret(keyPair, h);
+		auto gamma = DeriveEd25519SharedSecret(keyPair.privateKey(), h);
 
 		// generate k
 		bignum256modm k;
 		GenerateNonce(keyPair.privateKey(), { h }, k);
 
 		// k * B
-		Key k_times_B;
+		VrfPublicKey k_times_B;
 		ge25519 ALIGN(16) A;
 		ge25519_scalarmult_base_niels(&A, ge25519_niels_base_multiples, k);
 		ge25519_pack(k_times_B.data(), &A);
 
 		// k * h
-		Key k_times_h;
+		VrfPublicKey k_times_h;
 		ScalarMultiplier encodedK;
 		contract256_modm(encodedK, k);
 		ScalarMult(encodedK, h, k_times_h);
@@ -179,8 +180,8 @@ namespace catapult { namespace crypto {
 		return { gamma.copyTo<ProofGamma>(), c, s };
 	}
 
-	Hash512 VerifyVrfProof(const VrfProof& vrfProof, const RawBuffer& alpha, const Key& publicKey) {
-		auto gamma = vrfProof.Gamma.copyTo<Key>();
+	Hash512 VerifyVrfProof(const VrfProof& vrfProof, const RawBuffer& alpha, const VrfPublicKey& publicKey) {
+		auto gamma = vrfProof.Gamma.copyTo<VrfPublicKey>();
 
 		// gamma must be on the curve
 		ge25519 A;
@@ -189,7 +190,7 @@ namespace catapult { namespace crypto {
 
 		// map to group element
 		auto h = MapToKey(alpha, publicKey);
-		if (Key() == h)
+		if (VrfPublicKey() == h)
 			return Hash512();
 
 		// u = s * B - c * x_publicKey
@@ -204,7 +205,7 @@ namespace catapult { namespace crypto {
 
 		// V1 = s * h
 		// scalar multiplication cannot fail because s is small enough
-		Key v1;
+		VrfPublicKey v1;
 		ScalarMult(encodedS, h, v1);
 
 		// unpack cannot fail because V1 is valid by construction
@@ -213,7 +214,7 @@ namespace catapult { namespace crypto {
 
 		// V2 = -(c * gamma)
 		// scalar multiplication cannot fail because c is small enough
-		Key c_times_gamma;
+		VrfPublicKey c_times_gamma;
 		ScalarMult(encodedC, gamma, c_times_gamma);
 
 		// unpack cannot fail because V2 is valid by construction
@@ -226,7 +227,7 @@ namespace catapult { namespace crypto {
 		// v = V1 + V2_pniels = s * h - c * gamma
 		ge25519 V;
 		ge25519_p1p1 B;
-		Key v;
+		VrfPublicKey v;
 		ge25519_pnielsadd_p1p1(&B, &V1, &V2_pniels, 0);
 		ge25519_p1p1_to_full(&V, &B);
 		ge25519_pack(v.data(), &V);
@@ -237,6 +238,6 @@ namespace catapult { namespace crypto {
 	}
 
 	Hash512 GenerateVrfProofHash(const ProofGamma& gamma) {
-		return IetfHash(0x03, 0x03, { ScalarMultEight(gamma.copyTo<Key>()) });
+		return IetfHash(0x03, 0x03, { ScalarMultEight(gamma.copyTo<VrfPublicKey>()) });
 	}
 }}

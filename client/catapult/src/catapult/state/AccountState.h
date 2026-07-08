@@ -98,5 +98,5 @@ namespace catapult { namespace state {
 	Key GetNodePublicKey(const AccountState& accountState);
 
 	/// Gets the vrf public key associated with \a accountState or a zero key.
-	Key GetVrfPublicKey(const AccountState& accountState);
+	VrfPublicKey GetVrfPublicKey(const AccountState& accountState);
 }}

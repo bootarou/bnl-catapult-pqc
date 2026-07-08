@@ -194,6 +194,7 @@ namespace catapult { namespace harvesting {
 			, m_unlockedAccounts(unlockedAccounts)
 			, m_signingPublicKey(signingPublicKey)
 			, m_encryptionKeyPair(encryptionKeyPair)
+			, m_kemKeyPair(crypto::MlKemKeyPair::FromPrivate(crypto::PrivateKey::FromBuffer(encryptionKeyPair.privateKey())))
 			, m_dataDirectory(dataDirectory)
 			, m_harvestersFilename(m_dataDirectory.rootDir().file("harvesters.dat"))
 			, m_unlockedAccountsStorage(m_harvestersFilename)
@@ -201,7 +202,7 @@ namespace catapult { namespace harvesting {
 
 	void UnlockedAccountsUpdater::load() {
 		// load account descriptors
-		m_unlockedAccountsStorage.load(m_encryptionKeyPair, [&unlockedAccounts = m_unlockedAccounts](auto&& descriptor) {
+		m_unlockedAccountsStorage.load(m_kemKeyPair, [&unlockedAccounts = m_unlockedAccounts](auto&& descriptor) {
 			AddToUnlocked(unlockedAccounts, std::move(descriptor));
 		});
 	}
@@ -216,7 +217,7 @@ namespace catapult { namespace harvesting {
 				m_unlockedAccountsStorage);
 
 		auto cacheHeight = m_cache.createView().height();
-		UnlockedFileQueueConsumer(m_dataDirectory.dir("transfer_message"), cacheHeight, m_encryptionKeyPair, std::ref(processor));
+		UnlockedFileQueueConsumer(m_dataDirectory.dir("transfer_message"), cacheHeight, m_kemKeyPair, std::ref(processor));
 
 		// 2. prune accounts that are not eligible to harvest the next block
 		auto numPrunedAccounts = processor.pruneUnlockedAccounts();

@@ -61,18 +61,18 @@ namespace catapult { namespace crypto {
 		}
 	}
 
-	bool TryDecryptEd25199BlockCipher(
-			const RawBuffer& publicKeyPrefixedEncryptedPayload,
-			const KeyPair& keyPair,
+	bool TryDecryptMlKemBlockCipher(
+			const RawBuffer& ciphertextPrefixedEncryptedPayload,
+			const MlKemKeyPair& keyPair,
 			std::vector<uint8_t>& decrypted) {
-		if (Key::Size > publicKeyPrefixedEncryptedPayload.Size)
-			CATAPULT_THROW_INVALID_ARGUMENT("encrypted data does not contain key");
+		if (MlKemCiphertext::Size > ciphertextPrefixedEncryptedPayload.Size)
+			CATAPULT_THROW_INVALID_ARGUMENT("encrypted data does not contain kem ciphertext");
 
-		Key ephemeralPublicKey;
-		std::memcpy(ephemeralPublicKey.data(), publicKeyPrefixedEncryptedPayload.pData, Key::Size);
+		MlKemCiphertext kemCiphertext;
+		std::memcpy(kemCiphertext.data(), ciphertextPrefixedEncryptedPayload.pData, MlKemCiphertext::Size);
 
-		auto sharedKey = DeriveSharedKey(keyPair, ephemeralPublicKey);
-		auto encryptedData = SubView(publicKeyPrefixedEncryptedPayload, Key::Size);
+		auto sharedKey = DecapsulateSharedKey(keyPair, kemCiphertext);
+		auto encryptedData = SubView(ciphertextPrefixedEncryptedPayload, MlKemCiphertext::Size);
 		bool success = AesGcm256::TryDecrypt(sharedKey, encryptedData, decrypted);
 		SecureZero(sharedKey);
 		return success;

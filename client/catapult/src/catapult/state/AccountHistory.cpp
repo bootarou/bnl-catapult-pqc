@@ -28,7 +28,7 @@ namespace catapult { namespace state {
 		return m_heightBalanceMap;
 	}
 
-	const HeightIndexedHistoryMap<Key>& AccountHistory::vrfPublicKey() const {
+	const HeightIndexedHistoryMap<VrfPublicKey>& AccountHistory::vrfPublicKey() const {
 		return m_heightVrfPublicKeyMap;
 	}
 
@@ -46,7 +46,7 @@ namespace catapult { namespace state {
 		m_heightBalanceMap.add(height, balance);
 	}
 
-	void AccountHistory::add(Height height, const Key& vrfPublicKey) {
+	void AccountHistory::add(Height height, const VrfPublicKey& vrfPublicKey) {
 		m_heightVrfPublicKeyMap.add(height, vrfPublicKey);
 	}
 

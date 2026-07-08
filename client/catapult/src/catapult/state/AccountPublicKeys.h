@@ -172,10 +172,10 @@ namespace catapult { namespace state {
 		PublicKeyAccessor<Key>& node();
 
 		/// Gets the (const) vrf public key accessor.
-		const PublicKeyAccessor<Key>& vrf() const;
+		const PublicKeyAccessor<VrfPublicKey>& vrf() const;
 
 		/// Gets the vrf public key accessor.
-		PublicKeyAccessor<Key>& vrf();
+		PublicKeyAccessor<VrfPublicKey>& vrf();
 
 		/// Gets the (const) voting public keys accessor.
 		const PublicKeysAccessor<model::PinnedVotingKey>& voting() const;
@@ -186,7 +186,7 @@ namespace catapult { namespace state {
 	private:
 		PublicKeyAccessor<Key> m_linkedPublicKeyAccessor;
 		PublicKeyAccessor<Key> m_nodePublicKeyAccessor;
-		PublicKeyAccessor<Key> m_vrfPublicKeyAccessor;
+		PublicKeyAccessor<VrfPublicKey> m_vrfPublicKeyAccessor;
 		PublicKeysAccessor<model::PinnedVotingKey> m_votingPublicKeysAccessor;
 	};
 

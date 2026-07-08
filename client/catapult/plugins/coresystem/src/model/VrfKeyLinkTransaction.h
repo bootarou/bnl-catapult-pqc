@@ -28,7 +28,7 @@ namespace catapult { namespace model {
 
 	/// Binary layout for a vrf key link transaction body.
 	template<typename THeader>
-	struct VrfKeyLinkTransactionBody : public BasicKeyLinkTransactionBody<THeader, Key, Entity_Type_Vrf_Key_Link> {};
+	struct VrfKeyLinkTransactionBody : public BasicKeyLinkTransactionBody<THeader, VrfPublicKey, Entity_Type_Vrf_Key_Link> {};
 
 	DEFINE_EMBEDDABLE_TRANSACTION(VrfKeyLink)
 

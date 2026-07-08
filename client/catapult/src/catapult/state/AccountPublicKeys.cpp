@@ -76,6 +76,7 @@ namespace catapult { namespace state {
 	}
 
 	template class AccountPublicKeys::PublicKeyAccessor<Key>;
+	template class AccountPublicKeys::PublicKeyAccessor<VrfPublicKey>;
 
 	// endregion
 
@@ -240,11 +241,11 @@ namespace catapult { namespace state {
 		return m_nodePublicKeyAccessor;
 	}
 
-	const AccountPublicKeys::PublicKeyAccessor<Key>& AccountPublicKeys::vrf() const {
+	const AccountPublicKeys::PublicKeyAccessor<VrfPublicKey>& AccountPublicKeys::vrf() const {
 		return m_vrfPublicKeyAccessor;
 	}
 
-	AccountPublicKeys::PublicKeyAccessor<Key>& AccountPublicKeys::vrf() {
+	AccountPublicKeys::PublicKeyAccessor<VrfPublicKey>& AccountPublicKeys::vrf() {
 		return m_vrfPublicKeyAccessor;
 	}
 

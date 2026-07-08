@@ -28,7 +28,7 @@ namespace catapult { namespace harvesting {
 
 	namespace {
 		bool IsHarvesterPrivateKeyValid(bool enableAutoHarvesting, const std::string& privateKey) {
-			return crypto::Ed25519Utils::IsValidPrivateKeyString(privateKey) || (!enableAutoHarvesting && privateKey.empty());
+			return crypto::PrivateKeyUtils::IsValidPrivateKeyString(privateKey) || (!enableAutoHarvesting && privateKey.empty());
 		}
 	}
 

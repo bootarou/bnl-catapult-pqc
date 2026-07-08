@@ -90,6 +90,9 @@ namespace catapult { namespace utils {
 	/// Tries to parse \a str into a Key (\a parsedValue).
 	bool TryParseValue(const std::string& str, Key& parsedValue);
 
+	/// Tries to parse \a str into a VrfPublicKey (\a parsedValue).
+	bool TryParseValue(const std::string& str, VrfPublicKey& parsedValue);
+
 	/// Tries to parse \a str into a Hash256 (\a parsedValue).
 	bool TryParseValue(const std::string& str, Hash256& parsedValue);
 

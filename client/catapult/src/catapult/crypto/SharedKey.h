@@ -27,13 +27,42 @@ namespace catapult { namespace crypto {
 	struct SharedKey_tag { static constexpr size_t Size = 32; };
 	using SharedKey = utils::ByteArray<SharedKey_tag>;
 
+	struct SharedSecret_tag { static constexpr size_t Size = 32; };
+	using SharedSecret = utils::ByteArray<SharedSecret_tag>;
+
+	/// ML-KEM-768 (FIPS 203) public key.
+	struct MlKemPublicKey_tag { static constexpr size_t Size = 1184; };
+	using MlKemPublicKey = utils::ByteArray<MlKemPublicKey_tag>;
+
+	/// ML-KEM-768 (FIPS 203) ciphertext (encapsulated shared secret).
+	struct MlKemCiphertext_tag { static constexpr size_t Size = 1088; };
+	using MlKemCiphertext = utils::ByteArray<MlKemCiphertext_tag>;
+
+	/// ML-KEM-768 key pair traits.
+	/// \note The 32-byte private key is expanded into the 64-byte ML-KEM (d, z) seed via domain-separated hashing.
+	struct MlKemKeyPairTraits {
+	public:
+		using PublicKey = MlKemPublicKey;
+		using PrivateKey = crypto::PrivateKey;
+
+	public:
+		/// Extracts a public key (\a publicKey) from a private key (\a privateKey).
+		static void ExtractPublicKeyFromPrivateKey(const PrivateKey& privateKey, PublicKey& publicKey);
+	};
+
+	/// ML-KEM-768 key pair.
+	using MlKemKeyPair = BasicKeyPair<MlKemKeyPairTraits>;
+
 	/// Generates HKDF of \a sharedSecret using default zeroed salt and constant label "catapult".
-	SharedKey Hkdf_Hmac_Sha256_32(const Key& sharedSecret);
+	SharedKey Hkdf_Hmac_Sha256_32(const SharedSecret& sharedSecret);
 
-	/// Derives shared secret from \a keyPair and \a otherPublicKey.
-	Key DeriveSharedSecret(const KeyPair& keyPair, const Key& otherPublicKey);
+	/// Generates a shared key by encapsulating a fresh shared secret to \a recipientPublicKey.
+	/// The encapsulated secret is written to \a ciphertext, which must be transmitted alongside the encrypted payload.
+	/// \note This replaces the (ephemeral public key, ECDH) construction used with ed25519.
+	SharedKey EncapsulateSharedKey(const MlKemPublicKey& recipientPublicKey, MlKemCiphertext& ciphertext);
 
-	/// Generates shared key using \a keyPair and \a otherPublicKey.
-	/// \note: One of the provided keys is expected to be an ephemeral key.
-	SharedKey DeriveSharedKey(const KeyPair& keyPair, const Key& otherPublicKey);
+	/// Generates a shared key by decapsulating \a ciphertext with \a keyPair.
+	/// \note Per FIPS 203 implicit rejection, an invalid ciphertext yields a pseudo-random key;
+	///       authenticity is enforced by the subsequent AEAD tag check.
+	SharedKey DecapsulateSharedKey(const MlKemKeyPair& keyPair, const MlKemCiphertext& ciphertext);
 }}

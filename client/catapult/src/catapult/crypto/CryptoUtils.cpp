@@ -231,7 +231,7 @@ namespace catapult { namespace crypto {
 	}
 
 	// publicKey is canonical if the y coordinate is smaller than 2^255 - 19
-	bool IsCanonicalKey(const Key& publicKey) {
+	bool IsCanonicalKey(const VrfPublicKey& publicKey) {
 		// 0 != a if bits 8 through 254 of data are all set
 		const auto* buffer = publicKey.data();
 		uint32_t a = (buffer[31] & 0x7F) ^ 0x7F;
@@ -245,7 +245,7 @@ namespace catapult { namespace crypto {
 		return 0 != 1 - (a & b & 1);
 	}
 
-	bool IsNeutralElement(const Key& publicKey) {
+	bool IsNeutralElement(const VrfPublicKey& publicKey) {
 		const auto* buffer = publicKey.data();
 		uint32_t c = static_cast<uint8_t>(buffer[0] ^ 0x01);
 		for (auto i = 1u; i < 31; ++i)
@@ -270,11 +270,11 @@ namespace catapult { namespace crypto {
 		return IsZeroScalar(contractedX, 32) && IsEqualScalar(contractedY, contractedZ, 32);
 	}
 
-	bool UnpackNegative(ge25519& A, const Key& publicKey) {
+	bool UnpackNegative(ge25519& A, const VrfPublicKey& publicKey) {
 		return IsCanonicalKey(publicKey) && 0 != ge25519_unpack_negative_vartime(&A, publicKey.data());
 	}
 
-	bool UnpackNegativeAndCheckSubgroup(ge25519& A, const Key& publicKey) {
+	bool UnpackNegativeAndCheckSubgroup(ge25519& A, const VrfPublicKey& publicKey) {
 		return UnpackNegative(A, publicKey) && IsInMainSubgroup(A);
 	}
 
@@ -308,7 +308,7 @@ namespace catapult { namespace crypto {
 		SecureZero(privHash);
 	}
 
-	bool ScalarMult(const ScalarMultiplier& multiplier, const Key& publicKey, Key& sharedSecret) {
+	bool ScalarMult(const ScalarMultiplier& multiplier, const VrfPublicKey& publicKey, VrfPublicKey& sharedSecret) {
 		// unpack public key
 		ge25519 A;
 		if (!UnpackNegativeAndCheckSubgroup(A, publicKey))

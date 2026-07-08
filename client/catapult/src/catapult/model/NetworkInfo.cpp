@@ -29,6 +29,7 @@ namespace catapult { namespace model {
 					NetworkIdentifier::Zero,
 					NodeIdentityEqualityStrategy::Key,
 					Key(),
+					VrfPublicKey(),
 					catapult::GenerationHashSeed(),
 					utils::TimeSpan())
 	{}
@@ -37,11 +38,13 @@ namespace catapult { namespace model {
 			NetworkIdentifier identifier,
 			NodeIdentityEqualityStrategy nodeEqualityStrategy,
 			const Key& nemesisSignerPublicKey,
+			const VrfPublicKey& nemesisSignerVrfPublicKey,
 			const catapult::GenerationHashSeed& generationHashSeed,
 			const utils::TimeSpan& epochAdjustment)
 			: Identifier(identifier)
 			, NodeEqualityStrategy(nodeEqualityStrategy)
 			, NemesisSignerPublicKey(nemesisSignerPublicKey)
+			, NemesisSignerVrfPublicKey(nemesisSignerVrfPublicKey)
 			, GenerationHashSeed(generationHashSeed)
 			, EpochAdjustment(epochAdjustment)
 	{}

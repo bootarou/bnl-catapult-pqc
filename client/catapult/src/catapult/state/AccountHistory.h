@@ -34,7 +34,7 @@ namespace catapult { namespace state {
 		const HeightIndexedHistoryMap<Amount>& balance() const;
 
 		/// Gets the vrf public key history.
-		const HeightIndexedHistoryMap<Key>& vrfPublicKey() const;
+		const HeightIndexedHistoryMap<VrfPublicKey>& vrfPublicKey() const;
 
 		/// Gets the voting public keys history.
 		const HeightIndexedHistoryMap<std::vector<model::PinnedVotingKey>>& votingPublicKeys() const;
@@ -47,7 +47,7 @@ namespace catapult { namespace state {
 		void add(Height height, Amount balance);
 
 		/// Adds \a vrfPublicKey at \a height.
-		void add(Height height, const Key& vrfPublicKey);
+		void add(Height height, const VrfPublicKey& vrfPublicKey);
 
 		/// Adds \a votingPublicKeys at \a height.
 		void add(Height height, const std::vector<model::PinnedVotingKey>& votingPublicKeys);
@@ -61,7 +61,7 @@ namespace catapult { namespace state {
 
 	private:
 		HeightIndexedHistoryMap<Amount> m_heightBalanceMap;
-		HeightIndexedHistoryMap<Key> m_heightVrfPublicKeyMap;
+		HeightIndexedHistoryMap<VrfPublicKey> m_heightVrfPublicKeyMap;
 		HeightIndexedHistoryMap<std::vector<model::PinnedVotingKey>> m_heightVotingPublicKeysMap;
 	};
 }}

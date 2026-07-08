@@ -37,7 +37,7 @@ namespace catapult { namespace cache {
 			io::Write(output, amount);
 		}
 
-		void WriteHistoryMapValue(io::OutputStream& output, const Key& key) {
+		void WriteHistoryMapValue(io::OutputStream& output, const VrfPublicKey& key) {
 			output.write(key);
 		}
 
@@ -97,7 +97,7 @@ namespace catapult { namespace cache {
 			amount = io::Read<Amount>(input);
 		}
 
-		void ReadHistoryMapValue(io::InputStream& input, Key& key) {
+		void ReadHistoryMapValue(io::InputStream& input, VrfPublicKey& key) {
 			input.read(key);
 		}
 
@@ -131,7 +131,7 @@ namespace catapult { namespace cache {
 
 				state::AccountHistory accountHistory;
 				ReadHistoryMap<Amount>(input, accountHistory);
-				ReadHistoryMap<Key>(input, accountHistory);
+				ReadHistoryMap<VrfPublicKey>(input, accountHistory);
 				ReadHistoryMap<std::vector<model::PinnedVotingKey>>(input, accountHistory);
 				accountHistories.emplace(address, accountHistory);
 			}

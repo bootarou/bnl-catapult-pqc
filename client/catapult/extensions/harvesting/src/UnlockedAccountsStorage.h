@@ -21,7 +21,7 @@
 
 #pragma once
 #include "HarvestRequest.h"
-#include "catapult/crypto/KeyPair.h"
+#include "catapult/crypto/SharedKey.h"
 #include "catapult/functions.h"
 #include "catapult/types.h"
 #include <map>
@@ -59,7 +59,7 @@ namespace catapult { namespace harvesting {
 		void save(const predicate<const Key&>& filter) const;
 
 		/// Loads harvest requests using \a encryptionKeyPair and forwards to \a processDescriptor.
-		void load(const crypto::KeyPair& encryptionKeyPair, const consumer<BlockGeneratorAccountDescriptor&&>& processDescriptor);
+		void load(const crypto::MlKemKeyPair& encryptionKeyPair, const consumer<BlockGeneratorAccountDescriptor&&>& processDescriptor);
 
 	private:
 		void addRequest(

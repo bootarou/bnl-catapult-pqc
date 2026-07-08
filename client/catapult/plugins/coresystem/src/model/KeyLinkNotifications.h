@@ -29,5 +29,5 @@ namespace catapult { namespace model {
 	using VotingKeyLinkNotification = BasicKeyLinkNotification<PinnedVotingKey, Core_Voting_Key_Link_Notification>;
 
 	/// Notification of a vrf key link.
-	using VrfKeyLinkNotification = BasicKeyLinkNotification<Key, Core_Vrf_Key_Link_Notification>;
+	using VrfKeyLinkNotification = BasicKeyLinkNotification<VrfPublicKey, Core_Vrf_Key_Link_Notification>;
 }}

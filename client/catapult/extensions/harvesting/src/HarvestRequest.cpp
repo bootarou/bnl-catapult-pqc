@@ -26,12 +26,12 @@
 namespace catapult { namespace harvesting {
 
 	size_t HarvestRequest::DecryptedPayloadSize() {
-		// encrypted harvester signing private key | encrypted harvester vrf private key
-		return 2 * Key::Size;
+		// encrypted harvester signing private key (seed) | encrypted harvester vrf private key
+		return 2 * crypto::PrivateKey::Size;
 	}
 
 	size_t HarvestRequest::EncryptedPayloadSize() {
-		return Key::Size //                       ephemeral public key
+		return crypto::MlKemCiphertext::Size //   ml-kem encapsulated shared secret
 				+ crypto::AesGcm256::Tag::Size // aes gcm tag
 				+ crypto::AesGcm256::IV::Size //  aes gcm initialization vector
 				+ DecryptedPayloadSize(); //      decrypted payload

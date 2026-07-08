@@ -310,6 +310,10 @@ namespace catapult { namespace utils {
 		return TryParseByteArray(str, parsedValue);
 	}
 
+	bool TryParseValue(const std::string& str, VrfPublicKey& parsedValue) {
+		return TryParseByteArray(str, parsedValue);
+	}
+
 	bool TryParseValue(const std::string& str, Hash256& parsedValue) {
 		return TryParseByteArray(str, parsedValue);
 	}

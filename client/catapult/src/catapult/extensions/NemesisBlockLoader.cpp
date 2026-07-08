@@ -88,7 +88,7 @@ namespace catapult { namespace extensions {
 				CATAPULT_THROW_INVALID_ARGUMENT_1("nemesis public key does not match network", publicKey);
 
 			crypto::VrfProof vrfProof{ generationHashProof.Gamma, generationHashProof.VerificationHash, generationHashProof.Scalar };
-			auto proofHash = crypto::VerifyVrfProof(vrfProof, expectedNetwork.GenerationHashSeed, publicKey);
+			auto proofHash = crypto::VerifyVrfProof(vrfProof, expectedNetwork.GenerationHashSeed, expectedNetwork.NemesisSignerVrfPublicKey);
 			if (Hash512() == proofHash)
 				CATAPULT_THROW_INVALID_ARGUMENT("nemesis block has invalid generation hash proof");
 
