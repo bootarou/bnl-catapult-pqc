@@ -65,6 +65,9 @@ namespace catapult { namespace tools { namespace nemgen {
 		/// Nemesis signer private key.
 		std::string NemesisSignerPrivateKey;
 
+		/// Nemesis signer vrf private key used to generate the nemesis generation hash proof.
+		std::string NemesisSignerVrfPrivateKey;
+
 		/// Cpp file header.
 		std::string CppFileHeader;
 

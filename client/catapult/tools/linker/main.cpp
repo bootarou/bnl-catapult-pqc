@@ -93,7 +93,7 @@ namespace catapult { namespace tools { namespace linker {
 
 			std::shared_ptr<model::Transaction> createVrfKeyLinkTransaction(const std::string& linkedPublicKey) {
 				builders::VrfKeyLinkBuilder builder(m_networkIdentifier, m_signerPublicKey);
-				builder.setLinkedPublicKey(utils::ParseByteArray<Key>(linkedPublicKey));
+				builder.setLinkedPublicKey(utils::ParseByteArray<VrfPublicKey>(linkedPublicKey));
 				builder.setLinkAction(model::LinkAction::Link);
 				return builder.build();
 			}

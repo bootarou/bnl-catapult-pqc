@@ -29,7 +29,7 @@ namespace catapult { namespace builders {
 			, m_linkAction()
 	{}
 
-	void VrfKeyLinkBuilder::setLinkedPublicKey(const Key& linkedPublicKey) {
+	void VrfKeyLinkBuilder::setLinkedPublicKey(const VrfPublicKey& linkedPublicKey) {
 		m_linkedPublicKey = linkedPublicKey;
 	}
 

@@ -22,6 +22,7 @@
 #pragma once
 #include "BlockGeneratorAccountDescriptor.h"
 #include "HarvestRequest.h"
+#include "catapult/crypto/SharedKey.h"
 #include "catapult/functions.h"
 #include <string>
 

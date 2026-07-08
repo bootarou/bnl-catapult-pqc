@@ -156,7 +156,7 @@ namespace catapult { namespace tools { namespace nemgen {
 			model::Transactions m_transactions;
 		};
 
-		void AddGenerationHashProof(model::Block& block, const GenerationHashSeed& generationHashSeed, const crypto::KeyPair& vrfKeyPair) {
+		void AddGenerationHashProof(model::Block& block, const GenerationHashSeed& generationHashSeed, const crypto::VrfKeyPair& vrfKeyPair) {
 			auto vrfProof = crypto::GenerateVrfProof(generationHashSeed, vrfKeyPair);
 			block.GenerationHashProof = { vrfProof.Gamma, vrfProof.VerificationHash, vrfProof.Scalar };
 		}
@@ -228,7 +228,8 @@ namespace catapult { namespace tools { namespace nemgen {
 				transactions.transactions());
 
 		// - add generation hash proof using signer as vrf key pair
-		AddGenerationHashProof(*pBlock, config.NemesisGenerationHashSeed, signer);
+		auto vrfSigner = crypto::VrfKeyPair::FromString(config.NemesisSignerVrfPrivateKey);
+		AddGenerationHashProof(*pBlock, config.NemesisGenerationHashSeed, vrfSigner);
 		extensions::BlockExtensions(config.NemesisGenerationHashSeed).signFullBlock(signer, *pBlock);
 		return pBlock;
 	}

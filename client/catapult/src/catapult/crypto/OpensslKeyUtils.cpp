@@ -29,6 +29,7 @@
 #pragma clang diagnostic ignored "-Wreserved-id-macro"
 #endif
 #include <openssl/pem.h>
+#include <openssl/core_names.h>
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
@@ -74,9 +75,14 @@ namespace catapult { namespace crypto {
 
 		auto MapEvpKeyToPublicKey(const EVP_PKEY& key) {
 			Key publicKey;
-			auto publicKeyBufferSize = Key::Size;
-			auto result = EVP_PKEY_get_raw_public_key(&key, publicKey.data(), &publicKeyBufferSize);
-			return std::make_pair(publicKey, result);
+			size_t publicKeyBufferSize = 0;
+			auto result = EVP_PKEY_get_octet_string_param(
+					&key,
+					OSSL_PKEY_PARAM_PUB_KEY,
+					publicKey.data(),
+					publicKey.size(),
+					&publicKeyBufferSize);
+			return std::make_pair(publicKey, result && Key::Size == publicKeyBufferSize);
 		}
 	}
 
@@ -90,9 +96,15 @@ namespace catapult { namespace crypto {
 
 	crypto::KeyPair ReadKeyPairFromPrivateKeyPemFile(const std::string& filename) {
 		return TransformPemFileContents<PrivateKeyPemTraits>(filename, [](const auto& key) {
+			// ML-DSA private keys are represented by their 32-byte seed
 			std::array<uint8_t, PrivateKey::Size> privateKeyBuffer;
-			auto privateKeyBufferSize = Key::Size;
-			if (!EVP_PKEY_get_raw_private_key(&key, privateKeyBuffer.data(), &privateKeyBufferSize))
+			size_t privateKeyBufferSize = 0;
+			if (!EVP_PKEY_get_octet_string_param(
+					&key,
+					OSSL_PKEY_PARAM_ML_DSA_SEED,
+					privateKeyBuffer.data(),
+					privateKeyBuffer.size(),
+					&privateKeyBufferSize) || PrivateKey::Size != privateKeyBufferSize)
 				return std::make_pair(KeyPair::FromPrivate(PrivateKey()), false);
 
 			auto privateKey = PrivateKey::FromBufferSecure(privateKeyBuffer);

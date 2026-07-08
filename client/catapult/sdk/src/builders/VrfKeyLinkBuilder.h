@@ -38,7 +38,7 @@ namespace catapult { namespace builders {
 
 	public:
 		/// Sets the linked public key to \a linkedPublicKey.
-		void setLinkedPublicKey(const Key& linkedPublicKey);
+		void setLinkedPublicKey(const VrfPublicKey& linkedPublicKey);
 
 		/// Sets the link action to \a linkAction.
 		void setLinkAction(model::LinkAction linkAction);
@@ -62,7 +62,7 @@ namespace catapult { namespace builders {
 		std::unique_ptr<TTransaction> buildImpl() const;
 
 	private:
-		Key m_linkedPublicKey;
+		VrfPublicKey m_linkedPublicKey;
 		model::LinkAction m_linkAction;
 	};
 }}

@@ -54,7 +54,7 @@ namespace catapult { namespace harvesting {
 
 			return BlockGeneratorAccountDescriptor(
 					crypto::KeyPair::FromString(config.HarvesterSigningPrivateKey),
-					crypto::KeyPair::FromString(config.HarvesterVrfPrivateKey));
+					crypto::VrfKeyPair::FromString(config.HarvesterVrfPrivateKey));
 		}
 
 		std::shared_ptr<UnlockedAccounts> CreateUnlockedAccounts(

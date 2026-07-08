@@ -112,7 +112,7 @@ namespace catapult { namespace tools {
 				AutoLineEnding guard(m_out, m_counter);
 
 				print(keyPair.publicKey());
-				m_out << "," << crypto::Ed25519Utils::FormatPrivateKey(keyPair.privateKey());
+				m_out << "," << crypto::PrivateKeyUtils::FormatPrivateKey(keyPair.privateKey());
 			}
 
 			void print(const std::string& mnemonic, const crypto::KeyPair& keyPair) override {
@@ -173,7 +173,7 @@ namespace catapult { namespace tools {
 				print(keyPair.publicKey());
 				m_out
 						<< std::setw(Label_Width) << "private key: "
-						<< crypto::Ed25519Utils::FormatPrivateKey(keyPair.privateKey()) << std::endl;
+						<< crypto::PrivateKeyUtils::FormatPrivateKey(keyPair.privateKey()) << std::endl;
 			}
 
 			void print(const std::string& mnemonic, const crypto::KeyPair& keyPair) override {

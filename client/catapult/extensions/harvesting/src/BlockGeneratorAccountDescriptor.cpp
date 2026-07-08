@@ -27,10 +27,14 @@ namespace catapult { namespace harvesting {
 		crypto::KeyPair CreateZeroKeyPair() {
 			return crypto::KeyPair::FromPrivate(crypto::PrivateKey());
 		}
+
+		crypto::VrfKeyPair CreateZeroVrfKeyPair() {
+			return crypto::VrfKeyPair::FromPrivate(crypto::PrivateKey());
+		}
 	}
 
 	BlockGeneratorAccountDescriptor::BlockGeneratorAccountDescriptor()
-			: BlockGeneratorAccountDescriptor(CreateZeroKeyPair(), CreateZeroKeyPair())
+			: BlockGeneratorAccountDescriptor(CreateZeroKeyPair(), CreateZeroVrfKeyPair())
 	{}
 
 	BlockGeneratorAccountDescriptor::BlockGeneratorAccountDescriptor(crypto::KeyPair&& signingKeyPair, crypto::VrfKeyPair&& vrfKeyPair)

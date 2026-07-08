@@ -184,6 +184,7 @@ namespace catapult { namespace tools { namespace nemgen {
 		LOAD_NEMESIS_PROPERTY(NetworkIdentifier);
 		LOAD_NEMESIS_PROPERTY(NemesisGenerationHashSeed);
 		LOAD_NEMESIS_PROPERTY(NemesisSignerPrivateKey);
+		LOAD_NEMESIS_PROPERTY(NemesisSignerVrfPrivateKey);
 
 #undef LOAD_NEMESIS_PROPERTY
 
@@ -211,7 +212,7 @@ namespace catapult { namespace tools { namespace nemgen {
 
 		LOAD_PROPERTY("transactions", TransactionsDirectory);
 
-		utils::VerifyBagSizeExact(bag, 7 + numNamespaceProperties + numMosaicProperties);
+		utils::VerifyBagSizeExact(bag, 8 + numNamespaceProperties + numMosaicProperties);
 		return config;
 	}
 
