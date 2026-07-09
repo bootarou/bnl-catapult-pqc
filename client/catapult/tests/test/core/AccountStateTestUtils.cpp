@@ -139,7 +139,7 @@ namespace catapult { namespace test {
 			accountState.SupplementalPublicKeys.node().set(test::GenerateRandomByteArray<Key>());
 
 		if (HasFlag(state::AccountPublicKeys::KeyType::VRF, mask))
-			accountState.SupplementalPublicKeys.vrf().set(test::GenerateRandomByteArray<Key>());
+			accountState.SupplementalPublicKeys.vrf().set(test::GenerateRandomByteArray<VrfPublicKey>());
 
 		for (auto i = 0u; i < numVotingKeys; ++i) {
 			accountState.SupplementalPublicKeys.voting().add({
