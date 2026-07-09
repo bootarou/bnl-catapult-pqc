@@ -1,5 +1,11 @@
 # BNL — Post-Quantum Catapult (ML-DSA-44)
 
+> **Disclaimer:** This is an **unofficial, independent post-quantum experimental fork** of the Symbol
+> monorepo. It is **not affiliated with, endorsed by, or connected to** the official Symbol / NEM
+> projects, the NEM Group, or any Symbol (XYM) cryptocurrency, network, or organization. "Symbol",
+> "NEM", and related names are used only to describe the upstream software this fork derives from.
+> Do **not** treat this project as official Symbol software. Use at your own risk.
+
 > This is a **post-quantum fork** of the Symbol monorepo. The account signature scheme has been
 > migrated from ed25519 to **ML-DSA-44 (FIPS 204)**, with **ML-KEM-768 (FIPS 203)** for delegated-harvesting
 > key exchange. The VRF (block lottery) and finalization voting remain on ed25519 (hybrid design).
