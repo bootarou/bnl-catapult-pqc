@@ -9,16 +9,17 @@ import { concatBytes, utf8ToBytes } from '@noble/hashes/utils.js';
  */
 
 /**
- * Depth of the iVRF Merkle tree; the tree covers 2^Depth block indices per registration.
+ * Maximum supported iVRF Merkle tree depth (bounds the fixed on-wire proof size).
  * @type {number}
  */
-export const IVRF_TREE_DEPTH = 16;
+export const IVRF_MAX_TREE_DEPTH = 32;
 
 /**
- * Number of leaves (block indices) covered by a single iVRF registration.
- * @type {bigint}
+ * Number of leaves (block indices) covered by a single registration at a given depth.
+ * @param {number} depth Tree depth.
+ * @returns {bigint} Leaf count.
  */
-export const IVRF_LEAF_COUNT = 1n << BigInt(IVRF_TREE_DEPTH);
+export const iVrfLeafCount = depth => 1n << BigInt(depth);
 
 const LEAF_LABEL = utf8ToBytes('catapult-ivrf-leaf');
 
@@ -43,11 +44,15 @@ const hashPair = (left, right) => sha3_256(concatBytes(left, right));
  */
 export class iVrfKeyTree {
 	/**
-	 * Builds the full tree from a seed.
+	 * Builds a tree of the specified depth from a seed.
 	 * @param {Uint8Array} seed 32-byte iVRF seed.
+	 * @param {number} depth Tree depth (1..IVRF_MAX_TREE_DEPTH).
 	 */
-	constructor(seed) {
-		const leafCount = Number(IVRF_LEAF_COUNT);
+	constructor(seed, depth) {
+		if (0 === depth || depth > IVRF_MAX_TREE_DEPTH)
+			throw new RangeError(`iVrf tree depth ${depth} out of range`);
+
+		const leafCount = Number(iVrfLeafCount(depth));
 		const levels = [];
 
 		const leaves = new Array(leafCount);
@@ -55,7 +60,7 @@ export class iVrfKeyTree {
 			leaves[i] = computeLeaf(seed, i);
 		levels.push(leaves);
 
-		for (let level = 0; level < IVRF_TREE_DEPTH; ++level) {
+		for (let level = 0; level < depth; ++level) {
 			const lower = levels[level];
 			const upper = new Array(lower.length / 2);
 			for (let i = 0; i < lower.length; i += 2)
@@ -66,7 +71,20 @@ export class iVrfKeyTree {
 		/**
 		 * @private
 		 */
+		this._depth = depth;
+
+		/**
+		 * @private
+		 */
 		this._levels = levels;
+	}
+
+	/**
+	 * Gets the tree depth.
+	 * @returns {number} Tree depth.
+	 */
+	get depth() {
+		return this._depth;
 	}
 
 	/**
@@ -74,21 +92,21 @@ export class iVrfKeyTree {
 	 * @returns {Uint8Array} 32-byte root.
 	 */
 	get root() {
-		return this._levels[IVRF_TREE_DEPTH][0];
+		return this._levels[this._depth][0];
 	}
 
 	/**
 	 * Generates a proof for an index.
-	 * @param {number} index Leaf index (must be less than IVRF_LEAF_COUNT).
-	 * @returns {{ leaf: Uint8Array, path: Array<Uint8Array> }} Proof.
+	 * @param {number} index Leaf index (must be less than 2^depth).
+	 * @returns {{ leaf: Uint8Array, path: Array<Uint8Array> }} Proof (path has depth entries).
 	 */
 	prove(index) {
-		if (BigInt(index) >= IVRF_LEAF_COUNT)
+		if (BigInt(index) >= iVrfLeafCount(this._depth))
 			throw new RangeError(`iVrf index ${index} out of range`);
 
-		const path = new Array(IVRF_TREE_DEPTH);
+		const path = new Array(this._depth);
 		let nodeIndex = index;
-		for (let level = 0; level < IVRF_TREE_DEPTH; ++level) {
+		for (let level = 0; level < this._depth; ++level) {
 			path[level] = this._levels[level][nodeIndex ^ 1];
 			nodeIndex >>>= 1;
 		}
@@ -102,15 +120,16 @@ export class iVrfKeyTree {
  * @param {Uint8Array} root 32-byte registered root.
  * @param {number} index Leaf index.
  * @param {{ leaf: Uint8Array, path: Array<Uint8Array> }} proof Proof.
+ * @param {number} depth Tree depth used for the registration.
  * @returns {boolean} true if the proof is valid for the root.
  */
-export const verify = (root, index, proof) => {
-	if (BigInt(index) >= IVRF_LEAF_COUNT)
+export const verify = (root, index, proof, depth) => {
+	if (0 === depth || depth > IVRF_MAX_TREE_DEPTH || BigInt(index) >= iVrfLeafCount(depth))
 		return false;
 
 	let current = proof.leaf;
 	let nodeIndex = index;
-	for (let level = 0; level < IVRF_TREE_DEPTH; ++level) {
+	for (let level = 0; level < depth; ++level) {
 		current = 0 === (nodeIndex & 1)
 			? hashPair(current, proof.path[level])
 			: hashPair(proof.path[level], current);

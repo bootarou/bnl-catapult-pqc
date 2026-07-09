@@ -157,6 +157,19 @@ namespace catapult { namespace model {
 			++numOptionalChainProperties;
 		}
 
+		// iVRF parameters are optional; when absent they fall back to protocol defaults
+		config.IVrfTreeDepth = 16;
+		if (bag.contains(utils::ConfigurationKey("chain", "iVrfTreeDepth"))) {
+			LOAD_CHAIN_PROPERTY(IVrfTreeDepth);
+			++numOptionalChainProperties;
+		}
+
+		config.IVrfActivationDelay = 0;
+		if (bag.contains(utils::ConfigurationKey("chain", "iVrfActivationDelay"))) {
+			LOAD_CHAIN_PROPERTY(IVrfActivationDelay);
+			++numOptionalChainProperties;
+		}
+
 #undef LOAD_CHAIN_PROPERTY
 
 #define LOAD_FORK_HEIGHT_PROPERTY(NAME) utils::LoadIniProperty(bag, "fork_heights", #NAME, config.ForkHeights.NAME)

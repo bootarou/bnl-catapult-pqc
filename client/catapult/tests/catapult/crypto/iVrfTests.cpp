@@ -28,6 +28,9 @@ namespace catapult { namespace crypto {
 #define TEST_CLASS iVrfTests
 
 	namespace {
+		constexpr uint8_t Test_Depth = 10;
+		constexpr uint64_t Test_Leaf_Count = static_cast<uint64_t>(1) << Test_Depth;
+
 		iVrfSeed GenerateSeed() {
 			return iVrfSeed::Generate(test::RandomByte);
 		}
@@ -35,9 +38,9 @@ namespace catapult { namespace crypto {
 
 	// region proof size
 
-	TEST(TEST_CLASS, ProofHasFixedSize) {
-		// Assert: leaf + Depth sibling hashes
-		EXPECT_EQ(Hash256::Size * (1 + iVrf_Tree_Depth), sizeof(iVrfProof));
+	TEST(TEST_CLASS, ProofHasFixedMaxSize) {
+		// Assert: leaf + Max_Depth sibling hashes (independent of the configured depth)
+		EXPECT_EQ(Hash256::Size * (1 + iVrf_Max_Tree_Depth), sizeof(iVrfProof));
 	}
 
 	// endregion
@@ -46,69 +49,84 @@ namespace catapult { namespace crypto {
 
 	TEST(TEST_CLASS, ProofVerifiesForAllSampledIndices) {
 		// Arrange:
-		iVrfKeyTree tree(GenerateSeed());
+		iVrfKeyTree tree(GenerateSeed(), Test_Depth);
 		auto root = tree.root();
 
 		// Act + Assert:
-		for (uint64_t index : { uint64_t(0), uint64_t(1), uint64_t(1234), iVrf_Leaf_Count / 2, iVrf_Leaf_Count - 1 }) {
+		for (uint64_t index : { uint64_t(0), uint64_t(1), uint64_t(123), Test_Leaf_Count / 2, Test_Leaf_Count - 1 }) {
 			auto proof = tree.prove(index);
-			EXPECT_TRUE(iVrfVerify(root, index, proof)) << "index " << index;
+			EXPECT_TRUE(iVrfVerify(root, index, proof, Test_Depth)) << "index " << index;
 		}
 	}
 
 	TEST(TEST_CLASS, VerifyFailsForWrongIndex) {
 		// Arrange:
-		iVrfKeyTree tree(GenerateSeed());
+		iVrfKeyTree tree(GenerateSeed(), Test_Depth);
 		auto proof = tree.prove(100);
 
 		// Act + Assert:
-		EXPECT_FALSE(iVrfVerify(tree.root(), 101, proof));
+		EXPECT_FALSE(iVrfVerify(tree.root(), 101, proof, Test_Depth));
 	}
 
 	TEST(TEST_CLASS, VerifyFailsForOutOfRangeIndex) {
 		// Arrange:
-		iVrfKeyTree tree(GenerateSeed());
+		iVrfKeyTree tree(GenerateSeed(), Test_Depth);
 		auto proof = tree.prove(0);
 
 		// Act + Assert:
-		EXPECT_FALSE(iVrfVerify(tree.root(), iVrf_Leaf_Count, proof));
+		EXPECT_FALSE(iVrfVerify(tree.root(), Test_Leaf_Count, proof, Test_Depth));
+	}
+
+	TEST(TEST_CLASS, VerifyFailsForWrongDepth) {
+		// Arrange:
+		iVrfKeyTree tree(GenerateSeed(), Test_Depth);
+		auto proof = tree.prove(5);
+
+		// Act + Assert:
+		EXPECT_FALSE(iVrfVerify(tree.root(), 5, proof, Test_Depth + 1));
 	}
 
 	TEST(TEST_CLASS, VerifyFailsForTamperedLeaf) {
 		// Arrange:
-		iVrfKeyTree tree(GenerateSeed());
+		iVrfKeyTree tree(GenerateSeed(), Test_Depth);
 		auto proof = tree.prove(42);
 		proof.Leaf[0] ^= 0x01;
 
 		// Act + Assert:
-		EXPECT_FALSE(iVrfVerify(tree.root(), 42, proof));
+		EXPECT_FALSE(iVrfVerify(tree.root(), 42, proof, Test_Depth));
 	}
 
 	TEST(TEST_CLASS, VerifyFailsForTamperedPath) {
 		// Arrange:
-		iVrfKeyTree tree(GenerateSeed());
+		iVrfKeyTree tree(GenerateSeed(), Test_Depth);
 		auto proof = tree.prove(42);
 		proof.Path[0][0] ^= 0x01;
 
 		// Act + Assert:
-		EXPECT_FALSE(iVrfVerify(tree.root(), 42, proof));
+		EXPECT_FALSE(iVrfVerify(tree.root(), 42, proof, Test_Depth));
 	}
 
 	TEST(TEST_CLASS, VerifyFailsForProofFromDifferentSeed) {
 		// Arrange:
-		iVrfKeyTree tree1(GenerateSeed());
-		iVrfKeyTree tree2(GenerateSeed());
+		iVrfKeyTree tree1(GenerateSeed(), Test_Depth);
+		iVrfKeyTree tree2(GenerateSeed(), Test_Depth);
 
 		// Act + Assert: proof from tree2 does not verify against tree1's root
-		EXPECT_FALSE(iVrfVerify(tree1.root(), 7, tree2.prove(7)));
+		EXPECT_FALSE(iVrfVerify(tree1.root(), 7, tree2.prove(7), Test_Depth));
 	}
 
 	TEST(TEST_CLASS, ProveThrowsForOutOfRangeIndex) {
 		// Arrange:
-		iVrfKeyTree tree(GenerateSeed());
+		iVrfKeyTree tree(GenerateSeed(), Test_Depth);
 
 		// Act + Assert:
-		EXPECT_THROW(tree.prove(iVrf_Leaf_Count), catapult_invalid_argument);
+		EXPECT_THROW(tree.prove(Test_Leaf_Count), catapult_invalid_argument);
+	}
+
+	TEST(TEST_CLASS, ConstructorThrowsForInvalidDepth) {
+		// Act + Assert:
+		EXPECT_THROW(iVrfKeyTree(GenerateSeed(), 0), catapult_invalid_argument);
+		EXPECT_THROW(iVrfKeyTree(GenerateSeed(), iVrf_Max_Tree_Depth + 1), catapult_invalid_argument);
 	}
 
 	// endregion
@@ -118,8 +136,8 @@ namespace catapult { namespace crypto {
 	TEST(TEST_CLASS, RootAndLeavesAreDeterministicForSameSeed) {
 		// Arrange:
 		auto seed = GenerateSeed();
-		iVrfKeyTree tree1(seed);
-		iVrfKeyTree tree2(seed);
+		iVrfKeyTree tree1(seed, Test_Depth);
+		iVrfKeyTree tree2(seed, Test_Depth);
 
 		// Assert:
 		EXPECT_EQ(tree1.root(), tree2.root());
@@ -133,7 +151,7 @@ namespace catapult { namespace crypto {
 
 	TEST(TEST_CLASS, GenerationHashIsDeterministicAndBoundToInput) {
 		// Arrange:
-		iVrfKeyTree tree(GenerateSeed());
+		iVrfKeyTree tree(GenerateSeed(), Test_Depth);
 		auto proof = tree.prove(9);
 		auto alpha1 = test::GenerateRandomByteArray<Hash256>();
 		auto alpha2 = test::GenerateRandomByteArray<Hash256>();

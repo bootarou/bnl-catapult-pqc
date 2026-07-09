@@ -37,11 +37,11 @@ namespace catapult { namespace crypto {
 	/// per-height lottery value is H(leaf_i || parentGenerationHash). Uniqueness follows from the
 	/// binding of leaf i to the registered root; privacy holds until the leaf is revealed.
 
-	/// Depth of the iVRF Merkle tree; the tree covers 2^Depth block indices per registration.
-	constexpr size_t iVrf_Tree_Depth = 16;
-
-	/// Number of leaves (block indices) covered by a single iVRF registration.
-	constexpr uint64_t iVrf_Leaf_Count = static_cast<uint64_t>(1) << iVrf_Tree_Depth;
+	/// Maximum supported iVRF Merkle tree depth. Bounds the fixed on-wire proof size so that the
+	/// configurable tree depth (\c BlockchainConfiguration::IVrfTreeDepth) can change without a
+	/// block-header format change. The proof always reserves this many path slots; only the
+	/// configured depth are meaningful.
+	constexpr size_t iVrf_Max_Tree_Depth = 32;
 
 	/// iVRF secret seed (32 bytes). Kept private by the harvester.
 	struct iVrfSeed_tag { static constexpr size_t Size = 32; };
@@ -50,15 +50,21 @@ namespace catapult { namespace crypto {
 	/// iVRF public root (32 bytes). Registered on chain in place of the ECVRF public key.
 	using iVrfRoot = Hash256;
 
+	/// Number of leaves (block indices) covered by a single registration at \a depth.
+	constexpr uint64_t iVrfLeafCount(uint8_t depth) {
+		return static_cast<uint64_t>(1) << depth;
+	}
+
 #pragma pack(push, 1)
 
 	/// Fixed-size iVRF proof: revealed leaf plus its Merkle authentication path.
+	/// \note The path is sized to \c iVrf_Max_Tree_Depth; only the first (configured depth) entries are used.
 	struct iVrfProof {
 		/// Revealed secret leaf for the block index.
 		Hash256 Leaf;
 
-		/// Merkle authentication path (sibling hashes from leaf to root).
-		std::array<Hash256, iVrf_Tree_Depth> Path;
+		/// Merkle authentication path (sibling hashes from leaf to root); trailing entries are zero-padded.
+		std::array<Hash256, iVrf_Max_Tree_Depth> Path;
 
 	public:
 		/// Returns \c true if this proof is equal to \a rhs.
@@ -76,23 +82,27 @@ namespace catapult { namespace crypto {
 	/// In-memory iVRF Merkle tree built from a seed; provides the root and per-index proofs.
 	class iVrfKeyTree {
 	public:
-		/// Builds the full tree from \a seed.
-		explicit iVrfKeyTree(const iVrfSeed& seed);
+		/// Builds the tree of the specified \a depth from \a seed.
+		iVrfKeyTree(const iVrfSeed& seed, uint8_t depth);
 
 	public:
+		/// Gets the tree depth.
+		uint8_t depth() const;
+
 		/// Gets the tree root (the registrable public value).
 		const iVrfRoot& root() const;
 
-		/// Generates a proof for \a index (must be less than iVrf_Leaf_Count).
+		/// Generates a proof for \a index (must be less than 2^depth).
 		iVrfProof prove(uint64_t index) const;
 
 	private:
-		// nodes stored level by level; m_levels[0] = leaves, m_levels[Depth] = { root }
+		uint8_t m_depth;
+		// nodes stored level by level; m_levels[0] = leaves, m_levels[depth] = { root }
 		std::vector<std::vector<Hash256>> m_levels;
 	};
 
-	/// Recomputes the Merkle root implied by \a proof for \a index and returns \c true if it equals \a root.
-	bool iVrfVerify(const iVrfRoot& root, uint64_t index, const iVrfProof& proof);
+	/// Recomputes the depth-\a depth Merkle root implied by \a proof for \a index and returns \c true if it equals \a root.
+	bool iVrfVerify(const iVrfRoot& root, uint64_t index, const iVrfProof& proof, uint8_t depth);
 
 	/// Computes the iVRF output (block generation hash) binding \a proof's leaf to input \a alpha.
 	GenerationHash iVrfGenerationHash(const iVrfProof& proof, const RawBuffer& alpha);

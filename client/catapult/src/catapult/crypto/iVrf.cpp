@@ -66,17 +66,21 @@ namespace catapult { namespace crypto {
 		return leaf;
 	}
 
-	iVrfKeyTree::iVrfKeyTree(const iVrfSeed& seed) {
-		m_levels.resize(iVrf_Tree_Depth + 1);
+	iVrfKeyTree::iVrfKeyTree(const iVrfSeed& seed, uint8_t depth) : m_depth(depth) {
+		if (0 == depth || depth > iVrf_Max_Tree_Depth)
+			CATAPULT_THROW_INVALID_ARGUMENT_1("iVrf tree depth out of range", depth);
+
+		m_levels.resize(depth + 1);
 
 		// level 0: leaves
+		auto leafCount = iVrfLeafCount(depth);
 		auto& leaves = m_levels[0];
-		leaves.reserve(iVrf_Leaf_Count);
-		for (uint64_t i = 0; i < iVrf_Leaf_Count; ++i)
+		leaves.reserve(leafCount);
+		for (uint64_t i = 0; i < leafCount; ++i)
 			leaves.push_back(iVrfComputeLeaf(seed, i));
 
 		// internal levels
-		for (size_t level = 0; level < iVrf_Tree_Depth; ++level) {
+		for (size_t level = 0; level < depth; ++level) {
 			const auto& lower = m_levels[level];
 			auto& upper = m_levels[level + 1];
 			upper.reserve(lower.size() / 2);
@@ -85,19 +89,26 @@ namespace catapult { namespace crypto {
 		}
 	}
 
+	uint8_t iVrfKeyTree::depth() const {
+		return m_depth;
+	}
+
 	const iVrfRoot& iVrfKeyTree::root() const {
-		return m_levels[iVrf_Tree_Depth].front();
+		return m_levels[m_depth].front();
 	}
 
 	iVrfProof iVrfKeyTree::prove(uint64_t index) const {
-		if (index >= iVrf_Leaf_Count)
+		if (index >= iVrfLeafCount(m_depth))
 			CATAPULT_THROW_INVALID_ARGUMENT_1("iVrf index out of range", index);
 
 		iVrfProof proof;
 		proof.Leaf = m_levels[0][index];
+		// zero-pad unused trailing path slots
+		for (auto& sibling : proof.Path)
+			sibling = Hash256();
 
 		auto nodeIndex = index;
-		for (size_t level = 0; level < iVrf_Tree_Depth; ++level) {
+		for (size_t level = 0; level < m_depth; ++level) {
 			auto siblingIndex = nodeIndex ^ 1;
 			proof.Path[level] = m_levels[level][siblingIndex];
 			nodeIndex >>= 1;
@@ -106,13 +117,13 @@ namespace catapult { namespace crypto {
 		return proof;
 	}
 
-	bool iVrfVerify(const iVrfRoot& root, uint64_t index, const iVrfProof& proof) {
-		if (index >= iVrf_Leaf_Count)
+	bool iVrfVerify(const iVrfRoot& root, uint64_t index, const iVrfProof& proof, uint8_t depth) {
+		if (0 == depth || depth > iVrf_Max_Tree_Depth || index >= iVrfLeafCount(depth))
 			return false;
 
 		auto current = proof.Leaf;
 		auto nodeIndex = index;
-		for (size_t level = 0; level < iVrf_Tree_Depth; ++level) {
+		for (size_t level = 0; level < depth; ++level) {
 			// even node index => current is the left child, sibling on the right
 			current = 0 == (nodeIndex & 1)
 					? HashPair(current, proof.Path[level])

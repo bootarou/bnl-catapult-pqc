@@ -132,6 +132,15 @@ namespace catapult { namespace model {
 		/// \note A value of \c Height(0) disables chain finalization and preserves legacy behavior.
 		Height ChainFinalizationHeight;
 
+		/// Depth of the post-quantum iVRF Merkle tree used for the block-generation lottery.
+		/// A single VRF registration covers 2^IVrfTreeDepth block heights before it must be renewed.
+		/// \note Must not exceed \c crypto::iVrf_Max_Tree_Depth.
+		uint8_t IVrfTreeDepth;
+
+		/// Number of blocks between confirmation of a VRF (iVRF root) registration and its activation.
+		/// The activation delay prevents grinding on which root will win future block lotteries.
+		uint32_t IVrfActivationDelay;
+
 	public:
 		/// Fork heights configuration.
 		struct ForkHeights {
