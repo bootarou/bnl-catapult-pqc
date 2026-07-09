@@ -1,3 +1,55 @@
+# BNL — Post-Quantum Catapult (ML-DSA-44)
+
+> This is a **post-quantum fork** of the Symbol monorepo. The account signature scheme has been
+> migrated from ed25519 to **ML-DSA-44 (FIPS 204)**, with **ML-KEM-768 (FIPS 203)** for delegated-harvesting
+> key exchange. The VRF (block lottery) and finalization voting remain on ed25519 (hybrid design).
+> This is a **new-chain / hard-fork** change: there is **no backwards compatibility** with the public
+> Symbol network and a **new nemesis block is required**.
+
+## Cryptography
+
+| Purpose | Original | This fork |
+|---|---|---|
+| Account signatures (tx, blocks, cosignatures, TLS certs) | ed25519 | **ML-DSA-44** (FIPS 204) |
+| Delegated-harvesting key exchange | X25519 ECDH | **ML-KEM-768** (FIPS 203) |
+| VRF (block generation lottery) | ed25519 ECVRF | **ed25519 ECVRF (retained)** |
+| Finalization voting | ed25519 | **ed25519 (retained)** |
+
+Sizes: `Key` 32 → **1312 B**, `Signature` 64 → **2420 B**. `PrivateKey` stays **32 B** (ML-DSA seed;
+key expansion is deterministic). A separate `VrfPublicKey` (32 B) type is introduced for the retained
+ed25519 VRF path. Backed by OpenSSL 3.5+ (native ML-DSA / ML-KEM); no external PQC library required.
+
+## What changed
+
+- **crypto core** (`client/catapult/src/catapult/crypto`): `MlDsa.{h,cpp}` (OpenSSL EVP, deterministic
+  signing), `Signer` routed to ML-DSA, ed25519 isolated into `Ed25519Signer.{h,cpp}` for VRF/voting,
+  `SharedKey` → ML-KEM-768, `OpensslKeyUtils` reads ML-DSA PEM keys via octet/seed params, TLS
+  certificates (`CertificateUtils`) switched to ML-DSA-44.
+- **types / wire format**: `types.h` sizes, `catbuffer` schemas (`PublicKey=1312`, `Signature=2420`,
+  new `VrfPublicKey=32`), `NetworkInfo` gains `NemesisSignerVrfPublicKey`.
+- **VRF path** retyped to `VrfKeyPair`/`VrfPublicKey` end-to-end (account state, key-link, harvesting,
+  block processing) while keeping the ECVRF algorithm unchanged.
+- **tools**: `nemgen` (ML-DSA nemesis + `nemesisSignerVrfPrivateKey`), `linker` (VrfKeyLink/VotingKeyLink,
+  live network-time deadline), mongo mappers, and `client/rest` (native-crypto ML-DSA key handling).
+- **Opt-in Chain Finalization**: a `[chain] chainFinalizationHeight` setting (default `0` = disabled)
+  that freezes the chain at a target height (stops harvesting and rejects higher blocks).
+
+## Verified end-to-end (private network)
+
+New-nemesis ML-DSA network brought up in Docker and validated: single-node boot + block generation,
+2-node sync (matching block hashes), ML-DSA TLS peer handshakes, transfer / **Aggregate Complete** /
+**multisig cosignature** (1312 B key + 2420 B sig) inclusion via **REST `PUT /transactions`**, balance
+changes queryable via REST, **BFT finalization** advancing across nodes (ed25519 voting), and a
+pure-JS transaction signer (`@noble/post-quantum` ml-dsa44, cross-verified against OpenSSL).
+
+## Build & run
+
+Same toolchain as upstream catapult (see [`client/catapult`](client/catapult)); build inside the
+`symbolplatform/symbol-server-build-base` image with OpenSSL 3.5+. Requires a fresh nemesis
+(`tools/nemgen`) — the public Symbol network cannot be joined.
+
+---
+
 # Symbol Monorepo
 
 In Q1 2021, we consolidated a number of projects into this repository.
