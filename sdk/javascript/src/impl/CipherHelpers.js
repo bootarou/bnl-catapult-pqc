@@ -54,6 +54,24 @@ const encodeAesGcm = (deriveSharedKey, keyPair, recipientPublicKey, message) => 
 	return { tag, initializationVector, cipherText: cipherText.subarray(0, tagStartOffset) };
 };
 
+const decodeAesGcmWithKey = (sharedKey, encodedMessage) => {
+	const { tag, initializationVector, encodedMessageData } = decode(AesGcmCipher.TAG_SIZE, GCM_IV_SIZE, encodedMessage);
+
+	const cipher = new AesGcmCipher(sharedKey);
+	return new Uint8Array(cipher.decrypt(concatArrays(encodedMessageData, tag), initializationVector));
+};
+
+const encodeAesGcmWithKey = (sharedKey, message) => {
+	const cipher = new AesGcmCipher(sharedKey);
+
+	const initializationVector = new Uint8Array(crypto.randomBytes(GCM_IV_SIZE));
+	const cipherText = cipher.encrypt(message, initializationVector);
+	const tagStartOffset = cipherText.length - AesGcmCipher.TAG_SIZE;
+	const tag = cipherText.subarray(tagStartOffset);
+
+	return { tag, initializationVector, cipherText: cipherText.subarray(0, tagStartOffset) };
+};
+
 const encodeAesCbc = (deriveSharedKey, keyPair, recipientPublicKey, message) => {
 	const salt = new Uint8Array(crypto.randomBytes(SALT_SIZE));
 	const sharedKey = deriveSharedKey(keyPair, recipientPublicKey, salt);
@@ -68,7 +86,9 @@ const encodeAesCbc = (deriveSharedKey, keyPair, recipientPublicKey, message) => 
 export {
 	concatArrays,
 	decodeAesGcm,
+	decodeAesGcmWithKey,
 	decodeAesCbc,
 	encodeAesGcm,
+	encodeAesGcmWithKey,
 	encodeAesCbc
 };

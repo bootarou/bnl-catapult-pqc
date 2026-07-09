@@ -52,11 +52,47 @@ VRF・voting は従来どおり ed25519（32B）のまま温存。
   - `facade.verifyTransaction`: **true**
   - 直列化→`deserialize`→再直列化が完全一致（fee/deadline も復元）
 
-## 既知の制約（未対応）
-- **`src/symbol/MessageEncoder.js` / `src/symbol/SharedKey.js`（暗号化メッセージ）は未対応。**
-  X25519(tweetnacl) ECDH を使っており、account 公開鍵が ML-DSA(1312B) になったため
-  そのままでは動作しない。ポスト量子化には ML-KEM-768（C++ `crypto/SharedKey.cpp` と同様）
-  ベースの設計が必要だが、account へ ML-KEM 公開鍵を公開する仕組みが現状のスキーマに無く、
-  暗号化メッセージ用の相手鍵の入手経路が未定義。今回は署名系を優先し、本機能は別途設計とする。
+## メッセージ暗号化（ML-KEM-768 / FIPS 203）
+X25519(tweetnacl) ECDH を **ML-KEM-768 の鍵カプセル化(KEM)** に置換。
+C++ ノード（`crypto/SharedKey.cpp`）と同一構成で、委譲収穫の相互運用も可能。
+
+**変更ファイル**
+- **`src/symbol/SharedKey.js`** — ML-KEM ヘルパに全面書き換え:
+  - `deriveMlKemKeyPair(privateKey)` / `deriveMlKemPublicKey(privateKey)`
+    — account 秘密鍵(32B seed) から ML-KEM 鍵対を決定的に導出。
+    seed = `SHA512("catapult-mlkem-seed"(19B) || privateKey(32B))[:64]` を
+    `ml_kem768.keygen` に投入（C++ `DeriveMlKemSeed` と同一）。
+  - `encapsulateSharedKey(recipientMlKemPublicKey)` → `{ cipherText(1088B), sharedKey(32B) }`
+  - `decapsulateSharedKey(privateKey, cipherText)` → `sharedKey(32B)`
+  - HKDF = `HKDF-SHA256(salt=zero32, IKM=sharedSecret, info="catapult", L=32)`
+    （C++ `Hkdf_Hmac_Sha256_32` と一致）。
+- **`src/symbol/MessageEncoder.js`** — KEM ベースに書き換え。
+  KEM は DH と非対称なので暗号文を同送する:
+  - `encode(recipientMlKemPublicKey, message)`
+    → `[0x01][cipherText 1088][tag 16][iv 12][AES-GCM 暗号文]`
+  - `tryDecode(_, encoded)` — 自身の秘密鍵で decapsulate → AES-GCM 復号
+    （相手公開鍵は不要になったため第1引数は互換のため残置・未使用）。
+  - `encodePersistentHarvestingDelegation(nodeMlKemPublicKey, remote, vrf)`
+    → `[DELEGATION_MARKER 8][cipherText 1088][tag][iv][暗号文]`
+  - `get mlKemPublicKey()` を追加（相手に渡す自分の ML-KEM 公開鍵）。
+- **`src/impl/CipherHelpers.js`** — 事前計算した鍵で暗復号する
+  `encodeAesGcmWithKey` / `decodeAesGcmWithKey` を追加。
+- **`src/facade/SymbolFacade.js`** — 旧 `static deriveSharedKey`（DH）を廃し、
+  `deriveMlKemPublicKey` / `deriveMlKemKeyPair` / `encapsulateSharedKey` /
+  `decapsulateSharedKey` を静的公開。
+
+**運用上の注意**
+- ML-KEM 公開鍵は ML-DSA account 公開鍵から導出できない（別プリミティブ）。
+  送信者は受信者の **ML-KEM 公開鍵(1184B)** を別途入手する必要がある
+  （受信者が `deriveMlKemPublicKey` / `encoder.mlKemPublicKey` で提示）。
+- NEM 側（`src/nem/*`, `src/SharedKey.js` の X25519）は対象外・従来のまま。
+
+**検証結果（OpenSSL 3.5.3 / noble 相互運用）**
+- seed→ML-KEM 公開鍵: noble == OpenSSL（SHA256 一致、byte 単位一致）
+- noble `encapsulate` → OpenSSL `pkeyutl -decap`: shared secret **一致**
+- SDK 内 e2e: 暗号化メッセージ往復（日本語/絵文字含む）一致、
+  誤鍵拒否、AES-GCM 改竄検出、委譲収穫（remote+vrf 秘密鍵）往復一致
+
+## 既知の制約
 - 既存のユニットテスト／テストベクタ（`test/`, `vectors/`）は ed25519 前提のため未更新。
   ランタイム動作は上記 e2e で確認済み。

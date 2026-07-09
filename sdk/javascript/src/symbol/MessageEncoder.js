@@ -1,7 +1,11 @@
 import { KeyPair } from './KeyPair.js';
-import { deriveSharedKey } from './SharedKey.js';
-import { PrivateKey, PublicKey } from '../CryptoTypes.js';
-import { concatArrays, decodeAesGcm, encodeAesGcm } from '../impl/CipherHelpers.js';
+import {
+	MlKemCiphertextSize, decapsulateSharedKey, deriveMlKemPublicKey, encapsulateSharedKey
+} from './SharedKey.js';
+import { PublicKey } from '../CryptoTypes.js';
+import {
+	concatArrays, decodeAesGcmWithKey, encodeAesGcmWithKey
+} from '../impl/CipherHelpers.js';
 import { deepCompare } from '../utils/arrayHelpers.js';
 import { hexToUint8, isHexString, uint8ToHex } from '../utils/converter.js';
 
@@ -19,8 +23,18 @@ const filterExceptions = (statement, exceptions) => {
 	return [false, undefined];
 };
 
+const AES_GCM_EXCEPTIONS = [
+	'Unsupported state or unable to authenticate data',
+	'ML-KEM.decapsulate',
+	'invalid ciphertext'
+];
+
 /**
  * Encrypts and encodes messages between two parties.
+ * @note This uses ML-KEM-768 (FIPS 203) encapsulation to establish a shared key, replacing the
+ *       ed25519/X25519 ECDH construction. Because ML-KEM is a KEM (not a Diffie-Hellman primitive),
+ *       encoding requires the recipient's ML-KEM public key, which is derived deterministically from
+ *       the recipient's account private key via `deriveMlKemPublicKey`.
  */
 export default class MessageEncoder {
 	/**
@@ -43,32 +57,43 @@ export default class MessageEncoder {
 	}
 
 	/**
-	 * Tries to decode encoded message.
-	 * @param {PublicKey} recipientPublicKey Recipient's public key.
+	 * ML-KEM public key of this encoder, to be shared with counterparties that want to send encrypted messages.
+	 * @returns {Uint8Array} ML-KEM public key (1184 bytes).
+	 */
+	get mlKemPublicKey() {
+		return deriveMlKemPublicKey(this._keyPair.privateKey);
+	}
+
+	/**
+	 * Tries to decode an encoded message using this encoder's key pair.
+	 * @param {PublicKey} recipientPublicKey Unused (retained for API compatibility); ML-KEM decoding
+	 *                                       only requires this encoder's private key and the ciphertext.
 	 * @param {Uint8Array} encodedMessage Encoded message.
 	 * @returns {TryDecodeResult} Tuple containing decoded status and message.
 	 */
-	tryDecode(recipientPublicKey, encodedMessage) {
+	tryDecode(recipientPublicKey, encodedMessage) { // eslint-disable-line no-unused-vars
 		if (1 === encodedMessage[0]) {
+			const cipherTextEnd = 1 + MlKemCiphertextSize;
 			const [result, message] = filterExceptions(
-				() => decodeAesGcm(deriveSharedKey, this._keyPair, recipientPublicKey, encodedMessage.subarray(1)),
-				['Unsupported state or unable to authenticate data']
+				() => {
+					const sharedKey = decapsulateSharedKey(this._keyPair.privateKey, encodedMessage.subarray(1, cipherTextEnd));
+					return decodeAesGcmWithKey(sharedKey, encodedMessage.subarray(cipherTextEnd));
+				},
+				AES_GCM_EXCEPTIONS
 			);
 			if (result)
 				return { isDecoded: true, message };
 		}
 
 		if (0xFE === encodedMessage[0] && 0 === deepCompare(DELEGATION_MARKER, encodedMessage.slice(0, 8))) {
-			const ephemeralPublicKeyStart = DELEGATION_MARKER.length;
-			const ephemeralPublicKeyEnd = ephemeralPublicKeyStart + PublicKey.SIZE;
-			const ephemeralPublicKey = new PublicKey(encodedMessage.subarray(ephemeralPublicKeyStart, ephemeralPublicKeyEnd));
-
+			const cipherTextStart = DELEGATION_MARKER.length;
+			const cipherTextEnd = cipherTextStart + MlKemCiphertextSize;
 			const [result, message] = filterExceptions(
-				() => decodeAesGcm(deriveSharedKey, this._keyPair, ephemeralPublicKey, encodedMessage.subarray(ephemeralPublicKeyEnd)),
-				[
-					'Unsupported state or unable to authenticate data',
-					'invalid point'
-				]
+				() => {
+					const sharedKey = decapsulateSharedKey(this._keyPair.privateKey, encodedMessage.subarray(cipherTextStart, cipherTextEnd));
+					return decodeAesGcmWithKey(sharedKey, encodedMessage.subarray(cipherTextEnd));
+				},
+				AES_GCM_EXCEPTIONS
 			);
 			if (result)
 				return { isDecoded: true, message };
@@ -78,30 +103,31 @@ export default class MessageEncoder {
 	}
 
 	/**
-	 * Encodes message to recipient using recommended format.
-	 * @param {PublicKey} recipientPublicKey Recipient public key.
+	 * Encodes a message to a recipient using the recommended format.
+	 * @param {Uint8Array} recipientMlKemPublicKey Recipient's ML-KEM public key (1184 bytes).
 	 * @param {Uint8Array} message Message to encode.
 	 * @returns {Uint8Array} Encrypted and encoded message.
 	 */
-	encode(recipientPublicKey, message) {
-		const { tag, initializationVector, cipherText } = encodeAesGcm(deriveSharedKey, this._keyPair, recipientPublicKey, message);
+	encode(recipientMlKemPublicKey, message) {
+		const { cipherText, sharedKey } = encapsulateSharedKey(recipientMlKemPublicKey);
+		const { tag, initializationVector, cipherText: encryptedMessage } = encodeAesGcmWithKey(sharedKey, message);
 
-		return concatArrays(new Uint8Array([1]), tag, initializationVector, cipherText);
+		return concatArrays(new Uint8Array([1]), cipherText, tag, initializationVector, encryptedMessage);
 	}
 
 	/**
 	 * Encodes persistent harvesting delegation to node.
-	 * @param {PublicKey} nodePublicKey Node public key.
+	 * @param {Uint8Array} nodeMlKemPublicKey Node's ML-KEM public key (1184 bytes).
 	 * @param {KeyPair} remoteKeyPair Remote key pair.
 	 * @param {KeyPair} vrfKeyPair Vrf key pair.
 	 * @returns {Uint8Array} Encrypted and encoded harvesting delegation request.
 	 */
-	encodePersistentHarvestingDelegation(nodePublicKey, remoteKeyPair, vrfKeyPair) {
-		const ephemeralKeyPair = new KeyPair(PrivateKey.random());
+	encodePersistentHarvestingDelegation(nodeMlKemPublicKey, remoteKeyPair, vrfKeyPair) {
 		const message = concatArrays(remoteKeyPair.privateKey.bytes, vrfKeyPair.privateKey.bytes);
-		const { tag, initializationVector, cipherText } = encodeAesGcm(deriveSharedKey, ephemeralKeyPair, nodePublicKey, message);
+		const { cipherText, sharedKey } = encapsulateSharedKey(nodeMlKemPublicKey);
+		const { tag, initializationVector, cipherText: encryptedMessage } = encodeAesGcmWithKey(sharedKey, message);
 
-		return concatArrays(DELEGATION_MARKER, ephemeralKeyPair.publicKey.bytes, tag, initializationVector, cipherText);
+		return concatArrays(DELEGATION_MARKER, cipherText, tag, initializationVector, encryptedMessage);
 	}
 
 	/**
@@ -126,13 +152,13 @@ export default class MessageEncoder {
 	 * Encodes message to recipient using (deprecated) wallet format.
 	 * @deprecated This function is only provided for compatability with the original Symbol wallets.
 	 *             Please use `encode` in any new code.
-	 * @param {PublicKey} recipientPublicKey Recipient public key.
+	 * @param {Uint8Array} recipientMlKemPublicKey Recipient's ML-KEM public key (1184 bytes).
 	 * @param {Uint8Array} message Message to encode.
 	 * @returns {Uint8Array} Encrypted and encoded message.
 	 */
-	encodeDeprecated(recipientPublicKey, message) {
+	encodeDeprecated(recipientMlKemPublicKey, message) {
 		// wallet additionally hex encodes
-		const encodedHexString = uint8ToHex(this.encode(recipientPublicKey, message).subarray(1));
+		const encodedHexString = uint8ToHex(this.encode(recipientMlKemPublicKey, message).subarray(1));
 		const encodedHexStringBytes = new TextEncoder().encode(encodedHexString);
 		return new Uint8Array([1, ...encodedHexStringBytes]);
 	}

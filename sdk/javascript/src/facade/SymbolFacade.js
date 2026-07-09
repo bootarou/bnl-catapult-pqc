@@ -14,7 +14,9 @@ import {
 	Network,
 	NetworkTimestamp
 } from '../symbol/Network.js';
-import { deriveSharedKey } from '../symbol/SharedKey.js';
+import {
+	decapsulateSharedKey, deriveMlKemKeyPair, deriveMlKemPublicKey, encapsulateSharedKey
+} from '../symbol/SharedKey.js';
 import TransactionFactory from '../symbol/TransactionFactory.js';
 import { MerkleHashBuilder } from '../symbol/merkle.js';
 import * as sc from '../symbol/models.js';
@@ -178,12 +180,34 @@ export class SymbolFacade {
 	static Verifier = Verifier;
 
 	/**
-	 * Derives shared key from key pair and other party's public key.
-	 * @param {KeyPair} keyPair Key pair.
-	 * @param {PublicKey} otherPublicKey Other party's public key.
+	 * Derives an account's ML-KEM-768 public key from its private key.
+	 * Share this with counterparties so they can send encrypted messages to this account.
+	 * @param {PrivateKey} privateKey Account private key.
+	 * @returns {Uint8Array} ML-KEM public key (1184 bytes).
+	 */
+	static deriveMlKemPublicKey = deriveMlKemPublicKey;
+
+	/**
+	 * Derives an account's ML-KEM-768 key pair from its private key.
+	 * @param {PrivateKey} privateKey Account private key.
+	 * @returns {{ publicKey: Uint8Array, secretKey: Uint8Array }} ML-KEM key pair.
+	 */
+	static deriveMlKemKeyPair = deriveMlKemKeyPair;
+
+	/**
+	 * Encapsulates a fresh shared key to a recipient's ML-KEM public key.
+	 * @param {Uint8Array} recipientMlKemPublicKey Recipient's ML-KEM public key (1184 bytes).
+	 * @returns {{ cipherText: Uint8Array, sharedKey: SharedKey256 }} Ciphertext (to transmit) and shared key.
+	 */
+	static encapsulateSharedKey = encapsulateSharedKey;
+
+	/**
+	 * Decapsulates a shared key from a ciphertext using an account private key.
+	 * @param {PrivateKey} privateKey Recipient's account private key.
+	 * @param {Uint8Array} cipherText ML-KEM ciphertext (1088 bytes).
 	 * @returns {SharedKey256} Shared encryption key.
 	 */
-	static deriveSharedKey = deriveSharedKey;
+	static decapsulateSharedKey = decapsulateSharedKey;
 
 	/**
 	 * Creates a Symbol facade.
