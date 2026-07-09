@@ -25,13 +25,15 @@
 
 namespace catapult { namespace crypto {
 
+	// ML-DSA-44 seed (deterministic key expansion); private key size is unchanged from ed25519
 	struct VotingPrivateKey_tag { static constexpr size_t Size = 32; };
 	using VotingPrivateKey = SecureByteArray<VotingPrivateKey_tag>;
 
-	struct VotingSignature_tag { static constexpr size_t Size = 64; };
+	// ML-DSA-44 (FIPS 204) signature
+	struct VotingSignature_tag { static constexpr size_t Size = 2420; };
 	using VotingSignature = utils::ByteArray<VotingSignature_tag>;
 
-	/// BLS 381-12 key pair traits.
+	/// ML-DSA-44 key pair traits.
 	struct VotingKeyPairTraits {
 	public:
 		using PublicKey = VotingKey;
@@ -42,7 +44,7 @@ namespace catapult { namespace crypto {
 		static void ExtractPublicKeyFromPrivateKey(const PrivateKey& privateKey, PublicKey& publicKey);
 	};
 
-	/// BLS 381-12 key pair.
-	/// \note This key pair is used for voting messages.
+	/// ML-DSA-44 key pair.
+	/// \note This key pair is used for finalization voting messages.
 	using VotingKeyPair = BasicKeyPair<VotingKeyPairTraits>;
 }}

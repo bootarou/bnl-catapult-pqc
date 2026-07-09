@@ -37,7 +37,8 @@ namespace catapult {
 	struct Key_tag { static constexpr size_t Size = 1312; };
 	using Key = utils::ByteArray<Key_tag>;
 
-	struct VotingKey_tag { static constexpr size_t Size = 32; };
+	// ML-DSA-44 (FIPS 204) public key used for finalization voting (BM tree nodes)
+	struct VotingKey_tag { static constexpr size_t Size = 1312; };
 	using VotingKey = utils::ByteArray<VotingKey_tag>;
 
 	// ed25519 public key used exclusively for the (pre-quantum) VRF scheme

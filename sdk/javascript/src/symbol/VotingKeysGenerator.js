@@ -1,5 +1,5 @@
 import { KeyPair } from './KeyPair.js';
-import { PrivateKey } from '../CryptoTypes.js';
+import { PrivateKey, PublicKey, Signature } from '../CryptoTypes.js';
 
 const setBuffer = (destination, offset, source) => {
 	source.forEach((byte, i) => { destination.setUint8(offset + i, source[i]); });
@@ -33,8 +33,12 @@ export default class VotingKeysGenerator {
 	 * @returns {Uint8Array} Serialized voting keys.
 	 */
 	generate(startEpoch, endEpoch) {
-		const HEADER_SIZE = 80;
-		const EPOCH_ENTRY_SIZE = 96;
+		// layout (matches C++ crypto_voting/BmPrivateKeyTree): tree header (4 x uint64) +
+		// level header (root public key + 2 x uint64) + one entry per epoch (child private key + signature)
+		// note: sizes scale with the ML-DSA-44 voting key (PublicKey 1312, Signature 2420)
+		const LEVEL_HEADER_OFFSET = 32; // after start/end/last/lastWiped key identifiers
+		const HEADER_SIZE = LEVEL_HEADER_OFFSET + PublicKey.SIZE + 16;
+		const EPOCH_ENTRY_SIZE = PrivateKey.SIZE + Signature.SIZE;
 
 		const numEpochs = Number(endEpoch - startEpoch + 1n);
 		const buffer = new ArrayBuffer(HEADER_SIZE + (EPOCH_ENTRY_SIZE * numEpochs));
@@ -45,19 +49,19 @@ export default class VotingKeysGenerator {
 		view.setBigUint64(16, 0xFFFFFFFFFFFFFFFFn, true); // reserved - last (used) key identifier
 		view.setBigUint64(24, 0xFFFFFFFFFFFFFFFFn, true); // reserved - last wiped key identifier
 
-		setBuffer(view, 32, this._rootKeyPair.publicKey.bytes); // root voting public key
-		view.setBigUint64(64, startEpoch, true); // level 1/1 start key identifier
-		view.setBigUint64(72, endEpoch, true); // level 1/1 end key identifier
+		setBuffer(view, LEVEL_HEADER_OFFSET, this._rootKeyPair.publicKey.bytes); // root voting public key
+		view.setBigUint64(LEVEL_HEADER_OFFSET + PublicKey.SIZE, startEpoch, true); // level 1/1 start key identifier
+		view.setBigUint64(LEVEL_HEADER_OFFSET + PublicKey.SIZE + 8, endEpoch, true); // level 1/1 end key identifier
 
 		for (let i = 0; i < numEpochs; ++i) {
 			const identifier = endEpoch - BigInt(i);
 			const childPrivateKey = this._privateKeyGenerator();
 			const childKeyPair = new KeyPair(childPrivateKey);
 
-			const parentSignedPayloadBuffer = new ArrayBuffer(40);
+			const parentSignedPayloadBuffer = new ArrayBuffer(PublicKey.SIZE + 8);
 			const parentSignedPayloadView = new DataView(parentSignedPayloadBuffer);
 			setBuffer(parentSignedPayloadView, 0, childKeyPair.publicKey.bytes);
-			parentSignedPayloadView.setBigUint64(32, identifier, true);
+			parentSignedPayloadView.setBigUint64(PublicKey.SIZE, identifier, true);
 			const signature = this._rootKeyPair.sign(new Uint8Array(parentSignedPayloadBuffer));
 
 			const startOffset = HEADER_SIZE + (EPOCH_ENTRY_SIZE * i);

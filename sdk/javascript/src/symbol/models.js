@@ -377,19 +377,19 @@ export class PublicKey extends ByteArray {
 }
 
 export class VotingPublicKey extends ByteArray {
-	static SIZE = 32;
+	static SIZE = 1312;
 
-	constructor(votingPublicKey = new Uint8Array(32)) {
+	constructor(votingPublicKey = new Uint8Array(1312)) {
 		super(VotingPublicKey.SIZE, votingPublicKey);
 	}
 
 	get size() {
-		return 32;
+		return 1312;
 	}
 
 	static deserialize(payload) {
 		const byteArray = payload;
-		return new VotingPublicKey(new Uint8Array(byteArray.buffer, byteArray.byteOffset, 32));
+		return new VotingPublicKey(new Uint8Array(byteArray.buffer, byteArray.byteOffset, 1312));
 	}
 
 	serialize() {

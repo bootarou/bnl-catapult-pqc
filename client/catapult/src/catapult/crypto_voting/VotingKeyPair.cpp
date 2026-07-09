@@ -20,14 +20,14 @@
 **/
 
 #include "VotingKeyPair.h"
-#include "catapult/crypto/Ed25519Signer.h"
+#include "catapult/crypto/MlDsa.h"
 
 namespace catapult { namespace crypto {
 
 	void VotingKeyPairTraits::ExtractPublicKeyFromPrivateKey(const PrivateKey& privateKey, PublicKey& publicKey) {
-		VrfPublicKey ed25519PublicKey;
-		auto ed25519PrivateKey = crypto::PrivateKey::FromBuffer(privateKey);
-		ExtractEd25519PublicKey(ed25519PrivateKey, ed25519PublicKey);
-		publicKey = ed25519PublicKey.copyTo<VotingKey>();
+		Key mlDsaPublicKey;
+		auto mlDsaPrivateKey = crypto::PrivateKey::FromBuffer(privateKey);
+		ExtractMlDsaPublicKey(mlDsaPrivateKey, mlDsaPublicKey);
+		publicKey = mlDsaPublicKey.copyTo<VotingKey>();
 	}
 }}
