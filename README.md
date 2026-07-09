@@ -6,6 +6,12 @@
 > "NEM", and related names are used only to describe the upstream software this fork derives from.
 > Do **not** treat this project as official Symbol software. Use at your own risk.
 
+> **免責事項:** 本プロジェクトは Symbol モノレポの**非公式かつ独立したポスト量子（PQC）実験フォーク**です。
+> 公式 Symbol / NEM プロジェクト、NEM Group、および Symbol（XYM）暗号資産・ネットワーク・関連団体とは
+> **一切関係がなく、提携・承認・後援も受けていません**。「Symbol」「NEM」等の名称は、派生元のソフトウェアを
+> 説明する目的でのみ使用しています。本プロジェクトを公式 Symbol ソフトウェアとして扱わないでください。
+> 利用は自己責任でお願いします。
+
 > This is a **post-quantum fork** of the Symbol monorepo. The account signature scheme has been
 > migrated from ed25519 to **ML-DSA-44 (FIPS 204)**, with **ML-KEM-768 (FIPS 203)** for delegated-harvesting
 > key exchange. The VRF (block lottery) and finalization voting remain on ed25519 (hybrid design).
