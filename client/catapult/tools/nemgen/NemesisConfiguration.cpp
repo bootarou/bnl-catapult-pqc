@@ -186,6 +186,12 @@ namespace catapult { namespace tools { namespace nemgen {
 		LOAD_NEMESIS_PROPERTY(NemesisSignerPrivateKey);
 		LOAD_NEMESIS_PROPERTY(NemesisSignerVrfPrivateKey);
 
+		// iVrfTreeDepth is optional; when absent it defaults to the protocol default and must match
+		// the network [chain] iVrfTreeDepth for the nemesis proof to verify
+		config.IVrfTreeDepth = 16;
+		if (bag.contains(utils::ConfigurationKey("nemesis", "iVrfTreeDepth")))
+			LOAD_NEMESIS_PROPERTY(IVrfTreeDepth);
+
 #undef LOAD_NEMESIS_PROPERTY
 
 #define LOAD_CPP_PROPERTY(NAME) LOAD_PROPERTY("cpp", NAME)

@@ -156,9 +156,17 @@ namespace catapult { namespace tools { namespace nemgen {
 			model::Transactions m_transactions;
 		};
 
-		void AddGenerationHashProof(model::Block& block, const GenerationHashSeed& generationHashSeed, const crypto::VrfKeyPair& vrfKeyPair) {
-			auto vrfProof = crypto::GenerateVrfProof(generationHashSeed, vrfKeyPair);
-			block.GenerationHashProof = { vrfProof.Gamma, vrfProof.VerificationHash, vrfProof.Scalar };
+		void AddGenerationHashProof(
+				model::Block& block,
+				const GenerationHashSeed&,
+				const crypto::VrfKeyPair& vrfKeyPair,
+				uint8_t iVrfTreeDepth) {
+			// post-quantum iVRF: the nemesis uses leaf index 0 of the signer's tree;
+			// the registered root (network NemesisSignerVrfPublicKey) must equal the tree root logged below
+			auto seed = crypto::iVrfSeed::FromBuffer(vrfKeyPair.privateKey());
+			crypto::iVrfKeyTree tree(seed, iVrfTreeDepth);
+			block.GenerationHashProof = tree.prove(0);
+			CATAPULT_LOG(info) << "nemesis iVRF root (set network NemesisSignerVrfPublicKey to this): " << tree.root();
 		}
 	}
 
@@ -229,7 +237,7 @@ namespace catapult { namespace tools { namespace nemgen {
 
 		// - add generation hash proof using signer as vrf key pair
 		auto vrfSigner = crypto::VrfKeyPair::FromString(config.NemesisSignerVrfPrivateKey);
-		AddGenerationHashProof(*pBlock, config.NemesisGenerationHashSeed, vrfSigner);
+		AddGenerationHashProof(*pBlock, config.NemesisGenerationHashSeed, vrfSigner, config.IVrfTreeDepth);
 		extensions::BlockExtensions(config.NemesisGenerationHashSeed).signFullBlock(signer, *pBlock);
 		return pBlock;
 	}
@@ -255,8 +263,10 @@ namespace catapult { namespace tools { namespace nemgen {
 			const NemesisConfiguration& config,
 			const model::TransactionRegistry& transactionRegistry,
 			const model::Block& block) {
-		auto proofHash = crypto::GenerateVrfProofHash(block.GenerationHashProof.Gamma);
+		auto generationHash = crypto::iVrfGenerationHash(
+				block.GenerationHashProof,
+				{ config.NemesisGenerationHashSeed.data(), config.NemesisGenerationHashSeed.size() });
 		return extensions::BlockExtensions(config.NemesisGenerationHashSeed, transactionRegistry)
-				.convertBlockToBlockElement(block, proofHash.copyTo<GenerationHash>());
+				.convertBlockToBlockElement(block, generationHash);
 	}
 }}}

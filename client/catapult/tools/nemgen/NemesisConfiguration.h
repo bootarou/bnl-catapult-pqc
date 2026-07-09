@@ -68,6 +68,9 @@ namespace catapult { namespace tools { namespace nemgen {
 		/// Nemesis signer vrf private key used to generate the nemesis generation hash proof.
 		std::string NemesisSignerVrfPrivateKey;
 
+		/// Depth of the iVRF Merkle tree; must match the network [chain] iVrfTreeDepth.
+		uint8_t IVrfTreeDepth;
+
 		/// Cpp file header.
 		std::string CppFileHeader;
 

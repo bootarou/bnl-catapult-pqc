@@ -20,6 +20,7 @@
 **/
 
 #pragma once
+#include "catapult/crypto/KeyPair.h"
 #include "catapult/model/Elements.h"
 
 namespace catapult { namespace model { class TransactionRegistry; } }

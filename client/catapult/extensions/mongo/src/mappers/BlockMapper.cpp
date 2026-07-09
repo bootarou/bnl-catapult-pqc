@@ -83,9 +83,10 @@ namespace catapult { namespace mongo { namespace mappers {
 				<< "height" << ToInt64(block.Height)
 				<< "timestamp" << ToInt64(block.Timestamp)
 				<< "difficulty" << ToInt64(block.Difficulty)
-				<< "proofGamma" << ToBinary(block.GenerationHashProof.Gamma)
-				<< "proofVerificationHash" << ToBinary(block.GenerationHashProof.VerificationHash)
-				<< "proofScalar" << ToBinary(block.GenerationHashProof.Scalar)
+				<< "iVrfProofLeaf" << ToBinary(block.GenerationHashProof.Leaf)
+				<< "iVrfProofPath" << ToBinary(
+						reinterpret_cast<const uint8_t*>(block.GenerationHashProof.Path.data()),
+						block.GenerationHashProof.Path.size() * Hash256::Size)
 				<< "previousBlockHash" << ToBinary(block.PreviousBlockHash)
 				<< "transactionsHash" << ToBinary(block.TransactionsHash)
 				<< "receiptsHash" << ToBinary(block.ReceiptsHash)
