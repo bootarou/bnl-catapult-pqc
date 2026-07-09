@@ -162,7 +162,8 @@ namespace catapult { namespace tools { namespace linker {
 				auto pTransaction = factory.create(keyType, linkedPublicKey, startEpoch, endEpoch);
 
 				// 2. sign it
-				pTransaction->Deadline = Timestamp(1);
+				utils::NetworkTime networkTime(config.Blockchain.Network.EpochAdjustment);
+				pTransaction->Deadline = networkTime.now() + utils::TimeSpan::FromHours(2);
 				auto transactionExtensions = extensions::TransactionExtensions(config.Blockchain.Network.GenerationHashSeed);
 				transactionExtensions.sign(signer, *pTransaction);
 				auto transactionHash = transactionExtensions.hash(*pTransaction);
