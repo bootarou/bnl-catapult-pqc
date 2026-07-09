@@ -21,6 +21,8 @@
 
 #include "Harvester.h"
 #include "catapult/cache_core/ImportanceView.h"
+#include "catapult/cache_core/AccountStateCache.h"
+#include "catapult/cache_core/AccountStateCacheUtils.h"
 #include "catapult/chain/BlockDifficultyScorer.h"
 #include "catapult/chain/BlockScorer.h"
 #include "catapult/model/BlockUtils.h"
@@ -68,9 +70,9 @@ namespace catapult { namespace harvesting {
 			return pBlock;
 		}
 
-		void AddGenerationHashProof(model::Block& block, const crypto::VrfProof& vrfProof) {
-			block.GenerationHashProof = { vrfProof.Gamma, vrfProof.VerificationHash, vrfProof.Scalar };
-		}
+		void AddGenerationHashProof(model::Block& block, const crypto::iVrfProof& iVrfProof) {
+				block.GenerationHashProof = iVrfProof;
+			}
 	}
 
 	Harvester::Harvester(
@@ -85,6 +87,20 @@ namespace catapult { namespace harvesting {
 			, m_unlockedAccounts(unlockedAccounts)
 			, m_blockGenerator(blockGenerator)
 	{}
+
+	const std::shared_ptr<crypto::iVrfKeyTree>& Harvester::getOrBuildiVrfTree(
+			const BlockGeneratorAccountDescriptor& descriptor,
+			uint8_t depth) {
+		const auto& vrfPublicKey = descriptor.vrfKeyPair().publicKey();
+		auto iter = m_iVrfTreeCache.find(vrfPublicKey);
+		if (m_iVrfTreeCache.end() == iter) {
+			// the iVRF seed is the vrf private key; the tree root is the registrable public value
+			auto seed = crypto::iVrfSeed::FromBuffer(descriptor.vrfKeyPair().privateKey());
+			iter = m_iVrfTreeCache.emplace(vrfPublicKey, std::make_shared<crypto::iVrfKeyTree>(seed, depth)).first;
+		}
+
+		return iter->second;
+	}
 
 	std::unique_ptr<model::Block> Harvester::harvest(const model::BlockElement& lastBlockElement, Timestamp timestamp) {
 		NextBlockContext context(lastBlockElement, timestamp);
@@ -115,13 +131,41 @@ namespace catapult { namespace harvesting {
 
 		auto unlockedAccountsView = m_unlockedAccounts.view();
 		const crypto::KeyPair* pHarvesterKeyPair = nullptr;
-		crypto::VrfProof vrfProof;
+		crypto::iVrfProof iVrfProof;
 
-		unlockedAccountsView.forEach([&context, &hitContext, &hitPredicate, &pHarvesterKeyPair, &vrfProof](const auto& descriptor) {
+		auto iVrfTreeDepth = m_config.IVrfTreeDepth;
+		unlockedAccountsView.forEach([this, &context, &hitContext, &hitPredicate, &pHarvesterKeyPair, &iVrfProof,
+				&accountStateCache, iVrfTreeDepth](const auto& descriptor) {
 			hitContext.Signer = descriptor.signingKeyPair().publicKey();
 
-			vrfProof = crypto::GenerateVrfProof(context.ParentContext.GenerationHash, descriptor.vrfKeyPair());
-			hitContext.GenerationHash = model::CalculateGenerationHash(vrfProof.Gamma);
+			// resolve the iVRF registration (root + activation height) of the (forwarded) harvesting account
+			Height activationHeight;
+			bool hasRegistration = false;
+			{
+				auto accountStateView = accountStateCache.createView();
+				cache::ReadOnlyAccountStateCache readOnlyCache(*accountStateView);
+				auto accountStateIter = readOnlyCache.find(hitContext.Signer);
+				if (accountStateIter.tryGet()) {
+					cache::ProcessForwardedAccountState(readOnlyCache, accountStateIter.get().Address,
+							[&activationHeight, &hasRegistration](const auto& forwardedAccountState) {
+						activationHeight = forwardedAccountState.SupplementalPublicKeys.vrfRegistrationHeight();
+						hasRegistration = static_cast<bool>(forwardedAccountState.SupplementalPublicKeys.vrf());
+					});
+				}
+			}
+
+			if (!hasRegistration || context.Height < activationHeight)
+				return true;
+
+			auto leafIndex = (context.Height - activationHeight).unwrap();
+			if (leafIndex >= crypto::iVrfLeafCount(iVrfTreeDepth))
+				return true;
+
+			const auto& pTree = this->getOrBuildiVrfTree(descriptor, iVrfTreeDepth);
+			iVrfProof = pTree->prove(leafIndex);
+			hitContext.GenerationHash = crypto::iVrfGenerationHash(
+					iVrfProof,
+					{ context.ParentContext.GenerationHash.data(), context.ParentContext.GenerationHash.size() });
 			if (hitPredicate(hitContext)) {
 				pHarvesterKeyPair = &descriptor.signingKeyPair();
 				return false;
@@ -141,7 +185,7 @@ namespace catapult { namespace harvesting {
 				pHarvesterKeyPair->publicKey(),
 				m_beneficiary);
 
-		AddGenerationHashProof(*pBlockHeader, vrfProof);
+		AddGenerationHashProof(*pBlockHeader, iVrfProof);
 		auto pBlock = m_blockGenerator(*pBlockHeader, m_config.MaxTransactionsPerBlock);
 		if (pBlock)
 			SignBlockHeader(*pHarvesterKeyPair, *pBlock);

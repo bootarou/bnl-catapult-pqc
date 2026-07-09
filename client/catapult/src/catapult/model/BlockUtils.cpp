@@ -41,11 +41,6 @@ namespace catapult { namespace model {
 		builder.final(blockTransactionsHash);
 	}
 
-	GenerationHash CalculateGenerationHash(const crypto::ProofGamma& gamma) {
-		auto proofHash = GenerateVrfProofHash(gamma);
-		return proofHash.copyTo<GenerationHash>();
-	}
-
 	// endregion
 
 	// region block type

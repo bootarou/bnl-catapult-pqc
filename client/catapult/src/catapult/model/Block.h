@@ -23,7 +23,7 @@
 #include "SizePrefixedEntityContainer.h"
 #include "Transaction.h"
 #include "VerifiableEntity.h"
-#include "catapult/crypto/Vrf.h"
+#include "catapult/crypto/iVrf.h"
 #include "catapult/types.h"
 #include <memory>
 #include <vector>
@@ -49,7 +49,7 @@ namespace catapult { namespace model {
 		catapult::Difficulty Difficulty;
 
 		/// Generation hash proof.
-		crypto::VrfProof GenerationHashProof;
+		crypto::iVrfProof GenerationHashProof;
 
 		/// Previous block hash.
 		Hash256 PreviousBlockHash;

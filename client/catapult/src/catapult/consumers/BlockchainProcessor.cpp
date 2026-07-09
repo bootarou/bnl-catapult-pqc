@@ -97,10 +97,12 @@ namespace catapult { namespace consumers {
 			DefaultBlockchainProcessor(
 					const BlockHitPredicateFactory& blockHitPredicateFactory,
 					const chain::BatchEntityProcessor& batchEntityProcessor,
-					ReceiptValidationMode receiptValidationMode)
+					ReceiptValidationMode receiptValidationMode,
+					uint8_t iVrfTreeDepth)
 					: m_blockHitPredicateFactory(blockHitPredicateFactory)
 					, m_batchEntityProcessor(batchEntityProcessor)
 					, m_receiptValidationMode(receiptValidationMode)
+					, m_iVrfTreeDepth(iVrfTreeDepth)
 			{}
 
 		public:
@@ -126,7 +128,7 @@ namespace catapult { namespace consumers {
 
 				for (auto& element : elements) {
 					// 1. check generation hash
-					auto result = CheckGenerationHash(element, *pParent, *pParentGenerationHash, blockHitPredicate, readOnlyCache);
+					auto result = CheckGenerationHash(element, *pParent, *pParentGenerationHash, blockHitPredicate, readOnlyCache, m_iVrfTreeDepth);
 					if (!IsValidationResultSuccess(result))
 						return result;
 
@@ -167,12 +169,18 @@ namespace catapult { namespace consumers {
 			}
 
 		private:
-			static VrfPublicKey GetVrfPublicKey(const cache::ReadOnlyAccountStateCache& accountStateCache, const Address& blockHarvester) {
-				VrfPublicKey vrfPublicKey;
-				cache::ProcessForwardedAccountState(accountStateCache, blockHarvester, [&vrfPublicKey](const auto& accountState) {
-					vrfPublicKey = state::GetVrfPublicKey(accountState);
+			struct VrfRegistration {
+				VrfPublicKey Root;
+				Height ActivationHeight;
+			};
+
+			static VrfRegistration GetVrfRegistration(const cache::ReadOnlyAccountStateCache& accountStateCache, const Address& blockHarvester) {
+				VrfRegistration registration;
+				cache::ProcessForwardedAccountState(accountStateCache, blockHarvester, [&registration](const auto& accountState) {
+					registration.Root = state::GetVrfPublicKey(accountState);
+					registration.ActivationHeight = accountState.SupplementalPublicKeys.vrfRegistrationHeight();
 				});
-				return vrfPublicKey;
+				return registration;
 			}
 
 			static validators::ValidationResult CheckGenerationHash(
@@ -180,7 +188,8 @@ namespace catapult { namespace consumers {
 					const model::Block& parentBlock,
 					const GenerationHash& parentGenerationHash,
 					const BlockHitPredicate& blockHitPredicate,
-					const cache::ReadOnlyCatapultCache& readOnlyCache) {
+					const cache::ReadOnlyCatapultCache& readOnlyCache,
+					uint8_t iVrfTreeDepth) {
 				const auto& block = element.Block;
 				const auto& accountStateCache = readOnlyCache.sub<cache::AccountStateCache>();
 
@@ -192,15 +201,24 @@ namespace catapult { namespace consumers {
 					return chain::Failure_Chain_Block_Unknown_Signer;
 				}
 
-				auto vrfPublicKey = GetVrfPublicKey(accountStateCache, accountStateIter.get().Address);
-				auto vrfVerifyResult = crypto::VerifyVrfProof(block.GenerationHashProof, parentGenerationHash, vrfPublicKey);
+				// post-quantum iVRF: the registered value is a Merkle root; the block-lottery leaf index is
+				// (blockHeight - registration activation height), revealed via the block's iVRF proof
+				auto vrfRegistration = GetVrfRegistration(accountStateCache, accountStateIter.get().Address);
+				if (block.Height < vrfRegistration.ActivationHeight) {
+					CATAPULT_LOG(warning) << "vrf registration not yet active at height " << block.Height;
+					return chain::Failure_Chain_Block_Invalid_Vrf_Proof;
+				}
 
-				if (Hash512() == vrfVerifyResult) {
+				auto leafIndex = (block.Height - vrfRegistration.ActivationHeight).unwrap();
+				auto root = vrfRegistration.Root.copyTo<crypto::iVrfRoot>();
+				if (!crypto::iVrfVerify(root, leafIndex, block.GenerationHashProof, iVrfTreeDepth)) {
 					CATAPULT_LOG(warning) << "vrf proof does not validate at height " << block.Height;
 					return chain::Failure_Chain_Block_Invalid_Vrf_Proof;
 				}
 
-				element.GenerationHash = vrfVerifyResult.copyTo<GenerationHash>();
+				element.GenerationHash = crypto::iVrfGenerationHash(
+						block.GenerationHashProof,
+						{ parentGenerationHash.data(), parentGenerationHash.size() });
 				if (!blockHitPredicate(parentBlock, block, element.GenerationHash)) {
 					CATAPULT_LOG(warning) << "block " << block.Height << " failed hit";
 					return chain::Failure_Chain_Block_Not_Hit;
@@ -264,13 +282,15 @@ namespace catapult { namespace consumers {
 			BlockHitPredicateFactory m_blockHitPredicateFactory;
 			chain::BatchEntityProcessor m_batchEntityProcessor;
 			ReceiptValidationMode m_receiptValidationMode;
+			uint8_t m_iVrfTreeDepth;
 		};
 	}
 
 	BlockchainProcessor CreateBlockchainProcessor(
 			const BlockHitPredicateFactory& blockHitPredicateFactory,
 			const chain::BatchEntityProcessor& batchEntityProcessor,
-			ReceiptValidationMode receiptValidationMode) {
-		return DefaultBlockchainProcessor(blockHitPredicateFactory, batchEntityProcessor, receiptValidationMode);
+			ReceiptValidationMode receiptValidationMode,
+			uint8_t iVrfTreeDepth) {
+		return DefaultBlockchainProcessor(blockHitPredicateFactory, batchEntityProcessor, receiptValidationMode, iVrfTreeDepth);
 	}
 }}

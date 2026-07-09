@@ -75,7 +75,10 @@ namespace catapult { namespace extensions {
 			CATAPULT_LOG(info) << out.str();
 		}
 
-		void CheckNemesisBlockInfo(const model::BlockElement& blockElement, const model::NetworkInfo& expectedNetwork) {
+		void CheckNemesisBlockInfo(
+				const model::BlockElement& blockElement,
+				const model::NetworkInfo& expectedNetwork,
+				uint8_t iVrfTreeDepth) {
 			auto networkIdentifier = blockElement.Block.Network;
 			const auto& publicKey = blockElement.Block.SignerPublicKey;
 			const auto& generationHash = blockElement.GenerationHash;
@@ -87,12 +90,15 @@ namespace catapult { namespace extensions {
 			if (expectedNetwork.NemesisSignerPublicKey != publicKey)
 				CATAPULT_THROW_INVALID_ARGUMENT_1("nemesis public key does not match network", publicKey);
 
-			crypto::VrfProof vrfProof{ generationHashProof.Gamma, generationHashProof.VerificationHash, generationHashProof.Scalar };
-			auto proofHash = crypto::VerifyVrfProof(vrfProof, expectedNetwork.GenerationHashSeed, expectedNetwork.NemesisSignerVrfPublicKey);
-			if (Hash512() == proofHash)
+			// post-quantum iVRF: the nemesis signer's registered root is NemesisSignerVrfPublicKey and the
+			// nemesis block uses leaf index 0 with the network generation-hash seed as the VRF input
+			auto root = expectedNetwork.NemesisSignerVrfPublicKey.copyTo<crypto::iVrfRoot>();
+			if (!crypto::iVrfVerify(root, 0, generationHashProof, iVrfTreeDepth))
 				CATAPULT_THROW_INVALID_ARGUMENT("nemesis block has invalid generation hash proof");
 
-			auto expectedGenerationHash = proofHash.copyTo<GenerationHash>();
+			auto expectedGenerationHash = crypto::iVrfGenerationHash(
+					generationHashProof,
+					{ expectedNetwork.GenerationHashSeed.data(), expectedNetwork.GenerationHashSeed.size() });
 			if (expectedGenerationHash != generationHash)
 				CATAPULT_THROW_INVALID_ARGUMENT_2("nemesis block generation hash is invalid", generationHash, expectedGenerationHash);
 		}
@@ -227,7 +233,7 @@ namespace catapult { namespace extensions {
 		if (Verbosity::On == verbosity)
 			LogNemesisBlockInfo(nemesisBlockElement);
 
-		CheckNemesisBlockInfo(nemesisBlockElement, config.Network);
+		CheckNemesisBlockInfo(nemesisBlockElement, config.Network, config.IVrfTreeDepth);
 		CheckNemesisBlockTransactionTypes(nemesisBlockElement.Block, m_pluginManager.transactionRegistry());
 		CheckNemesisBlockFeeMultiplier(nemesisBlockElement.Block);
 

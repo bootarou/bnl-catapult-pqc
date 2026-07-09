@@ -23,9 +23,13 @@
 #include "HarvesterBlockGenerator.h"
 #include "UnlockedAccounts.h"
 #include "catapult/cache/CatapultCache.h"
+#include "catapult/crypto/iVrf.h"
 #include "catapult/model/BlockchainConfiguration.h"
 #include "catapult/model/Elements.h"
 #include "catapult/model/EntityInfo.h"
+#include "catapult/utils/Hashers.h"
+#include <memory>
+#include <unordered_map>
 
 namespace catapult { namespace harvesting { struct BlockExecutionHashes; } }
 
@@ -49,10 +53,17 @@ namespace catapult { namespace harvesting {
 		std::unique_ptr<model::Block> harvest(const model::BlockElement& lastBlockElement, Timestamp timestamp);
 
 	private:
+		const std::shared_ptr<crypto::iVrfKeyTree>& getOrBuildiVrfTree(const BlockGeneratorAccountDescriptor& descriptor, uint8_t depth);
+
+	private:
 		const cache::CatapultCache& m_cache;
 		const model::BlockchainConfiguration m_config;
 		const Address m_beneficiary;
 		const UnlockedAccounts& m_unlockedAccounts;
 		BlockGenerator m_blockGenerator;
+
+		// cache of built iVRF Merkle trees keyed by vrf public key; building a tree is expensive (O(2^depth))
+		// so it is reused across harvest attempts for the same account
+		std::unordered_map<VrfPublicKey, std::shared_ptr<crypto::iVrfKeyTree>, utils::ArrayHasher<VrfPublicKey>> m_iVrfTreeCache;
 	};
 }}
