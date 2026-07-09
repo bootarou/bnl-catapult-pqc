@@ -172,10 +172,19 @@ namespace catapult { namespace state {
 		PublicKeyAccessor<Key>& node();
 
 		/// Gets the (const) vrf public key accessor.
+		/// \note For the post-quantum iVRF this holds the registered Merkle tree root.
 		const PublicKeyAccessor<VrfPublicKey>& vrf() const;
 
 		/// Gets the vrf public key accessor.
 		PublicKeyAccessor<VrfPublicKey>& vrf();
+
+		/// Gets the activation height of the current iVRF root registration.
+		/// The block-lottery leaf index is (blockHeight - vrfRegistrationHeight); a value of \c Height(0)
+		/// means the root is active from the height at which it was linked.
+		Height vrfRegistrationHeight() const;
+
+		/// Sets the activation \a height of the current iVRF root registration.
+		void setVrfRegistrationHeight(Height height);
 
 		/// Gets the (const) voting public keys accessor.
 		const PublicKeysAccessor<model::PinnedVotingKey>& voting() const;
@@ -187,6 +196,7 @@ namespace catapult { namespace state {
 		PublicKeyAccessor<Key> m_linkedPublicKeyAccessor;
 		PublicKeyAccessor<Key> m_nodePublicKeyAccessor;
 		PublicKeyAccessor<VrfPublicKey> m_vrfPublicKeyAccessor;
+		Height m_vrfRegistrationHeight = Height(0);
 		PublicKeysAccessor<model::PinnedVotingKey> m_votingPublicKeysAccessor;
 	};
 

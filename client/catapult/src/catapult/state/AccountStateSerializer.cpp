@@ -133,8 +133,11 @@ namespace catapult { namespace state {
 			if (HasFlag(AccountPublicKeys::KeyType::Node, accountPublicKeys.mask()))
 				output.write(accountPublicKeys.node().get());
 
-			if (HasFlag(AccountPublicKeys::KeyType::VRF, accountPublicKeys.mask()))
+			if (HasFlag(AccountPublicKeys::KeyType::VRF, accountPublicKeys.mask())) {
 				output.write(accountPublicKeys.vrf().get());
+				// iVRF registration activation height (leaf index = blockHeight - vrfRegistrationHeight)
+				io::Write(output, accountPublicKeys.vrfRegistrationHeight());
+			}
 
 			for (auto i = 0u; i < accountPublicKeys.voting().size(); ++i) {
 				const auto& pinnedVotingKey = accountPublicKeys.voting().get(i);
@@ -219,8 +222,11 @@ namespace catapult { namespace state {
 			if (HasFlag(AccountPublicKeys::KeyType::Node, accountPublicKeysMask))
 				ReadSupplementalPublicKey(input, accountPublicKeys.node());
 
-			if (HasFlag(AccountPublicKeys::KeyType::VRF, accountPublicKeysMask))
+			if (HasFlag(AccountPublicKeys::KeyType::VRF, accountPublicKeysMask)) {
 				ReadSupplementalPublicKey(input, accountPublicKeys.vrf());
+				// iVRF registration activation height (leaf index = blockHeight - vrfRegistrationHeight)
+				accountPublicKeys.setVrfRegistrationHeight(io::Read<Height>(input));
+			}
 
 			for (auto i = 0u; i < numVotingKeys; ++i)
 				ReadSupplementalPublicKey(input, accountPublicKeys.voting());

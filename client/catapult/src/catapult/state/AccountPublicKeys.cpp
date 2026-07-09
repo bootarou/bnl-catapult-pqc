@@ -249,6 +249,14 @@ namespace catapult { namespace state {
 		return m_vrfPublicKeyAccessor;
 	}
 
+	Height AccountPublicKeys::vrfRegistrationHeight() const {
+		return m_vrfRegistrationHeight;
+	}
+
+	void AccountPublicKeys::setVrfRegistrationHeight(Height height) {
+		m_vrfRegistrationHeight = height;
+	}
+
 	const AccountPublicKeys::PublicKeysAccessor<model::PinnedVotingKey>& AccountPublicKeys::voting() const {
 		return m_votingPublicKeysAccessor;
 	}
