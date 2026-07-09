@@ -134,14 +134,18 @@ namespace catapult { namespace plugins {
 		};
 
 		void RegisterVrfKeyLinkTransaction(PluginManager& manager) {
+			auto iVrfActivationDelay = manager.config().IVrfActivationDelay;
+
 			manager.addTransactionSupport(CreateVrfKeyLinkTransactionPlugin());
 
 			manager.addStatefulValidatorHook([](auto& builder) {
 				builder.add(keylink::CreateKeyLinkValidator<model::VrfKeyLinkNotification, VrfKeyAccessor>("Vrf"));
 			});
 
-			manager.addObserverHook([](auto& builder) {
+			manager.addObserverHook([iVrfActivationDelay](auto& builder) {
 				builder.add(keylink::CreateKeyLinkObserver<model::VrfKeyLinkNotification, VrfKeyAccessor>("Vrf"));
+				// record the iVRF registration activation height alongside the linked root
+				builder.add(observers::CreateVrfRegistrationHeightObserver(iVrfActivationDelay));
 			});
 		}
 

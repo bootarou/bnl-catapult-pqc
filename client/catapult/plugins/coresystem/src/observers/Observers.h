@@ -20,6 +20,7 @@
 **/
 
 #pragma once
+#include "src/model/KeyLinkNotifications.h"
 #include "catapult/model/HeightDependentAddress.h"
 #include "catapult/model/Notifications.h"
 #include "catapult/observers/ObserverTypes.h"
@@ -38,6 +39,10 @@ namespace catapult { namespace observers {
 
 	/// Observes account public key changes.
 	DECLARE_OBSERVER(AccountPublicKey, model::AccountPublicKeyNotification)();
+
+	/// Observes vrf key link notifications, recording the iVRF registration activation height as
+	/// (link height + \a activationDelay) so block verification can map a height to a tree leaf index.
+	DECLARE_OBSERVER(VrfRegistrationHeight, model::VrfKeyLinkNotification)(uint32_t activationDelay);
 
 	// endregion
 
