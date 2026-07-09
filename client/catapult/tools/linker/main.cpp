@@ -27,6 +27,7 @@
 #include "catapult/extensions/TransactionExtensions.h"
 #include "catapult/io/RawFile.h"
 #include "catapult/utils/HexParser.h"
+#include "catapult/utils/NetworkTime.h"
 #include <filesystem>
 
 namespace catapult { namespace tools { namespace linker {

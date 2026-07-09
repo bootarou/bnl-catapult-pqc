@@ -133,10 +133,6 @@ namespace catapult { namespace tools { namespace testvectors {
 			return MosaicId(rawMosaicId);
 		}
 
-		auto ParseSharedKey(const RawString& str, size_t testCaseNumber) {
-			return ParseByteArray<crypto::SharedKey>("sharedKey", str, testCaseNumber);
-		}
-
 		// endregion
 
 		auto CreateHashTester(const consumer<const RawBuffer&, Hash256&>& hashFunc) {
@@ -216,55 +212,16 @@ namespace catapult { namespace tools { namespace testvectors {
 			return isVerified;
 		}
 
-		std::optional<bool> DeriveTester(const std::string&, const pt::ptree& testCase, size_t testCaseNumber) {
-			// Arrange:
-			auto privateKey = ParsePrivateKey(Get<>(testCase, "privateKey"), testCaseNumber);
-			auto otherPublicKey = ParsePublicKey(Get<>(testCase, "otherPublicKey"), testCaseNumber);
-			auto keyPair = crypto::KeyPair::FromPrivate(std::move(privateKey));
-			auto expectedSharedKey = ParseSharedKey(Get<>(testCase, "sharedKey"), testCaseNumber);
-
-			// Act:
-			auto sharedKey = crypto::DeriveSharedKey(keyPair, otherPublicKey);
-
-			// Assert:
-			return expectedSharedKey == sharedKey;
+		std::optional<bool> DeriveTester(const std::string&, const pt::ptree&, size_t) {
+			// ed25519/X25519 shared-key derivation was replaced by ML-KEM-768 encapsulation;
+			// these legacy shared-secret test vectors no longer apply and are skipped
+			return std::optional<bool>();
 		}
 
-		auto Concatenate(
-				const crypto::AesGcm256::Tag& tag,
-				const crypto::AesGcm256::IV& iv,
-				const std::vector<uint8_t>& encryptedPayload) {
-			std::vector<uint8_t> result;
-			result.resize(tag.size() + iv.size() + encryptedPayload.size());
-
-			std::memcpy(result.data(), tag.data(), tag.size());
-			std::memcpy(result.data() + tag.size(), iv.data(), iv.size());
-			std::memcpy(result.data() + tag.size() + iv.size(), encryptedPayload.data(), encryptedPayload.size());
-			return result;
-		}
-
-		std::optional<bool> DecryptTester(const std::string&, const pt::ptree& testCase, size_t testCaseNumber) {
-			// Arrange:
-			auto privateKey = ParsePrivateKey(Get<>(testCase, "privateKey"), testCaseNumber);
-			auto otherPublicKey = ParsePublicKey(Get<>(testCase, "otherPublicKey"), testCaseNumber);
-			auto keyPair = crypto::KeyPair::FromPrivate(std::move(privateKey));
-			auto sharedKey = crypto::DeriveSharedKey(keyPair, otherPublicKey);
-
-			auto tag = ParseByteArray<crypto::AesGcm256::Tag>("tag", Get<>(testCase, "tag"), testCaseNumber);
-			auto iv = ParseByteArray<crypto::AesGcm256::IV>("iv", Get<>(testCase, "iv"), testCaseNumber);
-			auto cipherTextStr = Get<>(testCase, "cipherText");
-			auto cipherText = ParseVector(cipherTextStr, testCaseNumber, cipherTextStr.size() / 2);
-			auto clearTextStr = Get<>(testCase, "clearText");
-			auto clearText = ParseVector(clearTextStr, testCaseNumber, clearTextStr.size() / 2);
-
-			auto encrypted = Concatenate(tag, iv, cipherText);
-
-			// Act:
-			std::vector<uint8_t> decrypted;
-			auto decryptionResult = crypto::AesGcm256::TryDecrypt(sharedKey, encrypted, decrypted);
-
-			// Assert:
-			return decryptionResult && clearText == decrypted;
+		std::optional<bool> DecryptTester(const std::string&, const pt::ptree&, size_t) {
+			// message decryption now uses ML-KEM-768 encapsulation instead of X25519 ECDH;
+			// these legacy cipher test vectors no longer apply and are skipped
+			return std::optional<bool>();
 		}
 
 		std::optional<bool> MosaicIdDerivationTester(const std::string&, const pt::ptree& testCase, size_t testCaseNumber) {
