@@ -72,10 +72,10 @@ export class PrivateKey extends ByteArray {
  */
 export class PublicKey extends ByteArray {
 	/**
-	 * Byte size of raw public key.
+	 * Byte size of raw public key (ML-DSA-44, FIPS 204).
 	 * @type {number}
 	 */
-	static SIZE = 32;
+	static SIZE = 1312;
 
 	/**
 	 * Byte array name (required because `constructor.name` is dropped during minification).
@@ -122,10 +122,10 @@ export class SharedKey256 extends ByteArray {
  */
 export class Signature extends ByteArray {
 	/**
-	 * Byte size of raw signature.
+	 * Byte size of raw signature (ML-DSA-44, FIPS 204).
 	 * @type {number}
 	 */
-	static SIZE = 64;
+	static SIZE = 2420;
 
 	/**
 	 * Byte array name (required because `constructor.name` is dropped during minification).

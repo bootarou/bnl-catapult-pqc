@@ -356,19 +356,19 @@ export class Hash512 extends ByteArray {
 }
 
 export class PublicKey extends ByteArray {
-	static SIZE = 32;
+	static SIZE = 1312;
 
-	constructor(publicKey = new Uint8Array(32)) {
+	constructor(publicKey = new Uint8Array(1312)) {
 		super(PublicKey.SIZE, publicKey);
 	}
 
 	get size() {
-		return 32;
+		return 1312;
 	}
 
 	static deserialize(payload) {
 		const byteArray = payload;
-		return new PublicKey(new Uint8Array(byteArray.buffer, byteArray.byteOffset, 32));
+		return new PublicKey(new Uint8Array(byteArray.buffer, byteArray.byteOffset, 1312));
 	}
 
 	serialize() {
@@ -398,25 +398,47 @@ export class VotingPublicKey extends ByteArray {
 }
 
 export class Signature extends ByteArray {
-	static SIZE = 64;
+	static SIZE = 2420;
 
-	constructor(signature = new Uint8Array(64)) {
+	constructor(signature = new Uint8Array(2420)) {
 		super(Signature.SIZE, signature);
 	}
 
 	get size() {
-		return 64;
+		return 2420;
 	}
 
 	static deserialize(payload) {
 		const byteArray = payload;
-		return new Signature(new Uint8Array(byteArray.buffer, byteArray.byteOffset, 64));
+		return new Signature(new Uint8Array(byteArray.buffer, byteArray.byteOffset, 2420));
 	}
 
 	serialize() {
 		return this.bytes;
 	}
 }
+
+export class VrfPublicKey extends ByteArray {
+	static SIZE = 32;
+
+	constructor(vrfPublicKey = new Uint8Array(32)) {
+		super(VrfPublicKey.SIZE, vrfPublicKey);
+	}
+
+	get size() {
+		return 32;
+	}
+
+	static deserialize(payload) {
+		const byteArray = payload;
+		return new VrfPublicKey(new Uint8Array(byteArray.buffer, byteArray.byteOffset, 32));
+	}
+
+	serialize() {
+		return this.bytes;
+	}
+}
+
 
 export class Mosaic {
 	static TYPE_HINTS = {
@@ -5903,7 +5925,7 @@ export class VrfKeyLinkTransactionV1 extends Transaction {
 
 	static TYPE_HINTS = {
 		...Transaction.TYPE_HINTS,
-		linkedPublicKey: 'pod:PublicKey',
+		linkedPublicKey: 'pod:VrfPublicKey',
 		linkAction: 'enum:LinkAction'
 	};
 
@@ -5911,7 +5933,7 @@ export class VrfKeyLinkTransactionV1 extends Transaction {
 		super();
 		this._version = VrfKeyLinkTransactionV1.TRANSACTION_VERSION;
 		this._type = VrfKeyLinkTransactionV1.TRANSACTION_TYPE;
-		this._linkedPublicKey = new PublicKey();
+		this._linkedPublicKey = new VrfPublicKey();
 		this._linkAction = LinkAction.UNLINK;
 	}
 
@@ -5947,7 +5969,7 @@ export class VrfKeyLinkTransactionV1 extends Transaction {
 		const instance = new VrfKeyLinkTransactionV1();
 
 		Transaction._deserialize(view, instance);
-		const linkedPublicKey = PublicKey.deserialize(view.buffer);
+		const linkedPublicKey = VrfPublicKey.deserialize(view.buffer);
 		view.shiftRight(linkedPublicKey.size);
 		const linkAction = LinkAction.deserializeAligned(view.buffer);
 		view.shiftRight(linkAction.size);
@@ -5993,7 +6015,7 @@ export class EmbeddedVrfKeyLinkTransactionV1 extends EmbeddedTransaction {
 
 	static TYPE_HINTS = {
 		...EmbeddedTransaction.TYPE_HINTS,
-		linkedPublicKey: 'pod:PublicKey',
+		linkedPublicKey: 'pod:VrfPublicKey',
 		linkAction: 'enum:LinkAction'
 	};
 
@@ -6001,7 +6023,7 @@ export class EmbeddedVrfKeyLinkTransactionV1 extends EmbeddedTransaction {
 		super();
 		this._version = EmbeddedVrfKeyLinkTransactionV1.TRANSACTION_VERSION;
 		this._type = EmbeddedVrfKeyLinkTransactionV1.TRANSACTION_TYPE;
-		this._linkedPublicKey = new PublicKey();
+		this._linkedPublicKey = new VrfPublicKey();
 		this._linkAction = LinkAction.UNLINK;
 	}
 
@@ -6037,7 +6059,7 @@ export class EmbeddedVrfKeyLinkTransactionV1 extends EmbeddedTransaction {
 		const instance = new EmbeddedVrfKeyLinkTransactionV1();
 
 		EmbeddedTransaction._deserialize(view, instance);
-		const linkedPublicKey = PublicKey.deserialize(view.buffer);
+		const linkedPublicKey = VrfPublicKey.deserialize(view.buffer);
 		view.shiftRight(linkedPublicKey.size);
 		const linkAction = LinkAction.deserializeAligned(view.buffer);
 		view.shiftRight(linkAction.size);

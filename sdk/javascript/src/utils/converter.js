@@ -139,6 +139,13 @@ const bytesToInt = (input, size, isSigned = false) => {
 	if (!DataType || 8 <= size)
 		throw Error(`unsupported int size ${size}`);
 
+	// ML-DSA-44 signatures (2420 bytes) break the historical 8-byte alignment of transaction bodies,
+	// so fall back to an aligned copy when the source offset is not a multiple of the read size.
+	if (0 !== input.byteOffset % size) {
+		const aligned = input.slice(0, size);
+		return new DataType(aligned.buffer, 0, 1)[0];
+	}
+
 	return new DataType(input.buffer, input.byteOffset, 1)[0];
 };
 
@@ -153,6 +160,13 @@ const bytesToBigInt = (input, size, isSigned = false) => {
 	const DataType = SIGNEDNESS_AND_SIZE_TO_ARRAY_TYPE_MAPPING[isSigned][size];
 	if (!DataType || 8 > size)
 		throw Error(`unsupported int size ${size}`);
+
+	// ML-DSA-44 signatures (2420 bytes) break the historical 8-byte alignment of transaction bodies,
+	// so fall back to an aligned copy when the source offset is not a multiple of the read size.
+	if (0 !== input.byteOffset % size) {
+		const aligned = input.slice(0, size);
+		return new DataType(aligned.buffer, 0, 1)[0];
+	}
 
 	return new DataType(input.buffer, input.byteOffset, 1)[0];
 };

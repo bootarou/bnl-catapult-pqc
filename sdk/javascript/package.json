@@ -76,6 +76,7 @@
   },
   "dependencies": {
     "@noble/hashes": "~2.2.0",
+    "@noble/post-quantum": "^0.4.1",
     "@types/node": "^26.0.0",
     "bitcore-mnemonic": "~11.5.1",
     "ripemd160": "~2.0.2"

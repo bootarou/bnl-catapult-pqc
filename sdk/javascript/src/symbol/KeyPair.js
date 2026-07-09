@@ -1,11 +1,10 @@
 import { PrivateKey, PublicKey, Signature } from '../CryptoTypes.js';
-import ed25519 from '../impl/ed25519.js';
 import { deepCompare } from '../utils/arrayHelpers.js';
-
-const HASH_MODE = 'Sha2_512';
+import { ml_dsa44 } from '@noble/post-quantum/ml-dsa.js';
 
 /**
- * Represents an ED25519 private and public key.
+ * Represents an ML-DSA-44 (FIPS 204) private and public key.
+ * @note the 32-byte private key is the ML-DSA seed; key expansion is deterministic.
  */
 export class KeyPair {
 	/**
@@ -21,7 +20,7 @@ export class KeyPair {
 		/**
 		 * @private
 		 */
-		this._keyPair = ed25519.get().keyPairFromSeed(HASH_MODE, this._privateKey.bytes);
+		this._keyPair = ml_dsa44.keygen(this._privateKey.bytes);
 	}
 
 	/**
@@ -46,7 +45,7 @@ export class KeyPair {
 	 * @returns {Signature} Message signature.
 	 */
 	sign(message) {
-		return new Signature(ed25519.get().sign(HASH_MODE, message, this._keyPair));
+		return new Signature(ml_dsa44.sign(this._keyPair.secretKey, message));
 	}
 }
 
@@ -76,6 +75,6 @@ export class Verifier {
 	 * @returns {boolean} true if the message signature verifies.
 	 */
 	verify(message, signature) {
-		return ed25519.get().verify(HASH_MODE, message, signature.bytes, this.publicKey.bytes);
+		return ml_dsa44.verify(this.publicKey.bytes, message, signature.bytes);
 	}
 }
