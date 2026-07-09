@@ -1254,83 +1254,72 @@ export class BlockType {
 }
 
 export class VrfProof {
+	static PATH_LENGTH = 32; // iVrf_Max_Tree_Depth
+
 	static TYPE_HINTS = {
-		gamma: 'pod:ProofGamma',
-		verificationHash: 'pod:ProofVerificationHash',
-		scalar: 'pod:ProofScalar'
+		leaf: 'pod:Hash256'
 	};
 
 	constructor() {
-		this._gamma = new ProofGamma();
-		this._verificationHash = new ProofVerificationHash();
-		this._scalar = new ProofScalar();
+		this._leaf = new Hash256();
+		this._path = [];
+		for (let i = 0; i < VrfProof.PATH_LENGTH; ++i)
+			this._path.push(new Hash256());
 	}
 
 	sort() {
 	}
 
-	get gamma() {
-		return this._gamma;
+	get leaf() {
+		return this._leaf;
 	}
 
-	set gamma(value) {
-		this._gamma = value;
+	set leaf(value) {
+		this._leaf = value;
 	}
 
-	get verificationHash() {
-		return this._verificationHash;
+	get path() {
+		return this._path;
 	}
 
-	set verificationHash(value) {
-		this._verificationHash = value;
-	}
-
-	get scalar() {
-		return this._scalar;
-	}
-
-	set scalar(value) {
-		this._scalar = value;
+	set path(value) {
+		this._path = value;
 	}
 
 	get size() {
-		let size = 0;
-		size += this.gamma.size;
-		size += this.verificationHash.size;
-		size += this.scalar.size;
-		return size;
+		return this.leaf.size + (VrfProof.PATH_LENGTH * Hash256.SIZE);
 	}
 
 	static deserialize(payload) {
 		const view = new BufferView(payload);
 		const instance = new VrfProof();
 
-		const gamma = ProofGamma.deserialize(view.buffer);
-		view.shiftRight(gamma.size);
-		const verificationHash = ProofVerificationHash.deserialize(view.buffer);
-		view.shiftRight(verificationHash.size);
-		const scalar = ProofScalar.deserialize(view.buffer);
-		view.shiftRight(scalar.size);
+		const leaf = Hash256.deserialize(view.buffer);
+		view.shiftRight(leaf.size);
+		instance._leaf = leaf;
 
-		instance._gamma = gamma;
-		instance._verificationHash = verificationHash;
-		instance._scalar = scalar;
+		const path = [];
+		for (let i = 0; i < VrfProof.PATH_LENGTH; ++i) {
+			const sibling = Hash256.deserialize(view.buffer);
+			view.shiftRight(sibling.size);
+			path.push(sibling);
+		}
+		instance._path = path;
 		return instance;
 	}
 
 	serialize() {
 		const buffer = new Writer(this.size);
-		buffer.write(this._gamma.serialize());
-		buffer.write(this._verificationHash.serialize());
-		buffer.write(this._scalar.serialize());
+		buffer.write(this._leaf.serialize());
+		for (const sibling of this._path)
+			buffer.write(sibling.serialize());
 		return buffer.storage;
 	}
 
 	toString() {
 		let result = '(';
-		result += `gamma: ${this._gamma.toString()}, `;
-		result += `verificationHash: ${this._verificationHash.toString()}, `;
-		result += `scalar: ${this._scalar.toString()}, `;
+		result += `leaf: ${this._leaf.toString()}, `;
+		result += `path: [${this._path.map(sibling => sibling.toString()).join(', ')}], `;
 		result += ')';
 		return result;
 	}
@@ -1340,13 +1329,11 @@ export class VrfProof {
 	 */
 	toJson() {
 		const result = {};
-		result.gamma = this._gamma.toJson();
-		result.verificationHash = this._verificationHash.toJson();
-		result.scalar = this._scalar.toJson();
+		result.leaf = this._leaf.toJson();
+		result.path = this._path.map(sibling => sibling.toJson());
 		return result;
 	}
 }
-
 export class Block {
 	static TYPE_HINTS = {
 		signature: 'pod:Signature',
