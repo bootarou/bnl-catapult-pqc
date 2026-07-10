@@ -60,6 +60,9 @@ Same toolchain as upstream catapult (see [`client/catapult`](client/catapult)); 
 `symbolplatform/symbol-server-build-base` image with OpenSSL 3.5+. Requires a fresh nemesis
 (`tools/nemgen`) — the public Symbol network cannot be joined.
 
+**📖 起動マニュアル: [`BNL-STARTUP.md`](BNL-STARTUP.md)** — ビルドから nemesis 生成、
+フルスタック（node ＋ broker ＋ mongo ＋ REST）起動・検証まで（[`docker-compose.pqc.yml`](docker-compose.pqc.yml) を使用）。
+
 ---
 
 # Symbol Monorepo
