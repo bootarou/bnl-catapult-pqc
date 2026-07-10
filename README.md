@@ -60,7 +60,7 @@ Same toolchain as upstream catapult (see [`client/catapult`](client/catapult)); 
 `symbolplatform/symbol-server-build-base` image with OpenSSL 3.5+. Requires a fresh nemesis
 (`tools/nemgen`) — the public Symbol network cannot be joined.
 
-**📘 総括資料: [`PQC-SUMMARY.md`](PQC-SUMMARY.md)** — PQC 移行作業の全体像（暗号構成・設計判断・
+**📘 総括資料: [`PQC-SUMMARY.md`](PQC-SUMMARY.md)**（English: [`PQC-SUMMARY.en.md`](PQC-SUMMARY.en.md)） — PQC 移行作業の全体像（暗号構成・設計判断・
 コンポーネント別変更・検証結果・公開物一覧・残課題・ドキュメント索引）。
 
 **📖 起動マニュアル: [`BNL-STARTUP.md`](BNL-STARTUP.md)** — ビルドから nemesis 生成、

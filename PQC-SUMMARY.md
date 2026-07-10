@@ -5,6 +5,8 @@
 **作成日**: 2026-07-10
 **ステータス**: 全コンポーネント実装・実チェーン検証・公開まで完了
 
+English version: [`PQC-SUMMARY.en.md`](PQC-SUMMARY.en.md)
+
 ---
 
 ## 1. プロジェクト概要
