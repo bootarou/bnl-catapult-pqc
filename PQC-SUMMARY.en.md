@@ -121,7 +121,7 @@ chains is impossible; the design assumes a **new network bootstrapped from a fre
 - Operations: REST requires a **certificate identity separate from the API node** (reusing the
   node's certificate gets rejected as a duplicate identity)
 
-### 3-3. JavaScript SDK (`sdk/javascript` → published as `pqc-catapult-sdk-v2`)
+### 3-3. JavaScript SDK v3 (`sdk/javascript` → published as `pqc-catapult-sdk-v3`)
 
 - `CryptoTypes.js` / `models.js` (catbuffer): PublicKey 1312 / Signature 2420 / new
   `VrfPublicKey` (32 B) type / `VotingPublicKey` 1312. Block model carries the iVRF proof
@@ -137,9 +137,14 @@ chains is impossible; the design assumes a **new network bootstrapped from a fre
 - `VotingKeysGenerator`: sizes computed from key/signature constants (byte-identical layout to
   C++ `BmPrivateKeyTree`)
 - `utils/converter.js`: 2420 B signatures break 8-byte alignment → unaligned-read fallback added
-- npm git-install support: removed broken submodules (`catbuffer-generators` / `travis`,
-  upstream repos gone) and added `prepare: npm run build`, so
-  `npm i github:bootarou/pqc-catapult-sdk-v2#feat-pqc` works out of the box
+- Standalone publication: extracted into `pqc-catapult-sdk-v3` via `git subtree split` (history
+  preserved) and `iVrf` exported from the `symbol-sdk/symbol` entry point. Pure ESM with no
+  build step, so `npm i github:bootarou/pqc-catapult-sdk-v3#feat-pqc` just works
+
+**Legacy SDK v2** (`pqc-catapult-sdk-v2`, used by the explorer): the separate TypeScript SDK
+2.0.6 line was also PQC-enabled. For npm git installs, broken submodules
+(`catbuffer-generators` / `travis`, upstream repos gone) were removed and
+`prepare: npm run build` added, so `npm i github:bootarou/pqc-catapult-sdk-v2#feat-pqc` works
 
 ### 3-4. symbol-bootstrap (published: `bootarou/symbol-bootstrap`, branch `pqc-bootstrap`)
 
@@ -197,7 +202,8 @@ PQC networks can now be generated and operated **without changing how the tool i
 | Repository | Branch | Contents |
 |---|---|---|
 | [bnl-catapult-pqc](https://github.com/bootarou/bnl-catapult-pqc) | `feat-VRF/votiong` | Main monorepo (catapult-server / REST / SDK / docs) |
-| [pqc-catapult-sdk-v2](https://github.com/bootarou/pqc-catapult-sdk-v2) | `feat-pqc` | TypeScript SDK (PQC build of symbol-sdk 2.x; usable as an npm git dependency) |
+| [pqc-catapult-sdk-v3](https://github.com/bootarou/pqc-catapult-sdk-v3) | `feat-pqc` | **JavaScript SDK v3** (extracted from the monorepo's `sdk/javascript` with full history; pure ESM, no build step, installable via `npm i github:bootarou/pqc-catapult-sdk-v3#feat-pqc`) |
+| [pqc-catapult-sdk-v2](https://github.com/bootarou/pqc-catapult-sdk-v2) | `feat-pqc` | TypeScript SDK v2 (PQC build of the legacy symbol-sdk 2.x line, used by the explorer; usable as an npm git dependency) |
 | [pqc-catapult-explorer](https://github.com/bootarou/pqc-catapult-explorer) | `feat-pqc` | Block explorer (iVRF proof display) |
 | [symbol-bootstrap](https://github.com/bootarou/symbol-bootstrap) | `pqc-bootstrap` | PQC support for the network-generation/operation CLI |
 
