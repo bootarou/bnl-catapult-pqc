@@ -17,6 +17,7 @@ import {
 	proveMerkle,
 	provePatriciaMerkle
 } from './merkle.js';
+import * as iVrf from './iVrf.js';
 import { metadataGenerateKey, metadataUpdateValue } from './metadata.js';
 import * as models from './models.js';
 import * as descriptors from './models_ts.js';
@@ -126,7 +127,12 @@ export {
 	/**
 	 * Descriptors generated from catbuffer schemas for improved TypeScript support.
 	 */
-	descriptors
+	descriptors,
+
+	/**
+	 * Hash-based indexed VRF (iVRF) used for the post-quantum block lottery.
+	 */
+	iVrf
 
 	// endregion
 };
