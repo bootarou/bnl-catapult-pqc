@@ -95,6 +95,8 @@ Docker Hub (see below), and [`BNL-STARTUP.md`](BNL-STARTUP.md) walks through the
 | [pqc-catapult-sdk-v2](https://github.com/bootarou/pqc-catapult-sdk-v2) | PQC build of the legacy symbol-sdk 2.x line (used by the explorer) |
 | [pqc-catapult-explorer](https://github.com/bootarou/pqc-catapult-explorer) | Block explorer (iVRF proof display) |
 | [symbol-bootstrap](https://github.com/bootarou/symbol-bootstrap) (`pqc-bootstrap`) | Network generation / operation CLI with PQC support |
+| [blockchain-network-launcher](https://github.com/bootarou/blockchain-network-launcher) | **BNL** — tool for launching and managing custom blockchain networks (what this stack is built for) |
+| [custom-catapult-chainFinalizationHeight](https://github.com/bootarou/custom-catapult-chainFinalizationHeight) | Non-PQC base fork this repo builds on (upstream + stability fixes + chain finalization height) |
 | `nftdrive/bnl-catapult-server-pqc:1.0.3.9-bnl` | Docker: catapult server + broker |
 | `nftdrive/bnl-catapult-rest-pqc:2.4.3-bnl` | Docker: REST gateway |
 
