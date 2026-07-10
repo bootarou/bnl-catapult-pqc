@@ -63,6 +63,8 @@ Same toolchain as upstream catapult (see [`client/catapult`](client/catapult)); 
 **📖 起動マニュアル: [`BNL-STARTUP.md`](BNL-STARTUP.md)** — ビルドから nemesis 生成、
 フルスタック（node ＋ broker ＋ mongo ＋ REST）起動・検証まで（[`docker-compose.pqc.yml`](docker-compose.pqc.yml) を使用）。
 
+**📄 レポート**: [`PQC-bootstrap-report.md`](PQC-bootstrap-report.md) — `symbol-bootstrap` の標準コマンドで PQC チェーンを運用する対応と検証結果 ／ [`PQC-VRF-voting-report.md`](PQC-VRF-voting-report.md) — iVRF・ML-DSA 投票 ／ [`ML-DSA-44-sdk-report.md`](ML-DSA-44-sdk-report.md) — JS SDK。
+
 ---
 
 # Symbol Monorepo
