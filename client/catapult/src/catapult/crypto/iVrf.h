@@ -43,6 +43,10 @@ namespace catapult { namespace crypto {
 	/// configured depth are meaningful.
 	constexpr size_t iVrf_Max_Tree_Depth = 32;
 
+	/// Default iVRF tree depth (matches BlockchainConfiguration::IVrfTreeDepth default). Used where the
+	/// configured depth is unavailable (e.g. deriving the vrf public key = tree root from a key pair).
+	constexpr uint8_t iVrf_Default_Tree_Depth = 16;
+
 	/// iVRF secret seed (32 bytes). Kept private by the harvester.
 	struct iVrfSeed_tag { static constexpr size_t Size = 32; };
 	using iVrfSeed = SecureByteArray<iVrfSeed_tag>;

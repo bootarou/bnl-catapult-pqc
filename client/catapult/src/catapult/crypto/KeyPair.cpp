@@ -22,6 +22,7 @@
 #include "KeyPair.h"
 #include "Ed25519Signer.h"
 #include "MlDsa.h"
+#include "iVrf.h"
 
 namespace catapult { namespace crypto {
 
@@ -36,7 +37,10 @@ namespace catapult { namespace crypto {
 	// region VrfKeyPairTraits
 
 	void VrfKeyPairTraits::ExtractPublicKeyFromPrivateKey(const PrivateKey& privateKey, PublicKey& publicKey) {
-		ExtractEd25519PublicKey(privateKey, publicKey);
+		// PQC iVRF: the vrf public key is the Merkle tree root derived from the seed at the default depth
+		auto seed = iVrfSeed::FromBuffer(privateKey);
+		iVrfKeyTree tree(seed, iVrf_Default_Tree_Depth);
+		publicKey = tree.root().copyTo<VrfPublicKey>();
 	}
 
 	// endregion
