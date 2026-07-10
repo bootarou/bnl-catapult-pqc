@@ -31,9 +31,8 @@ const parserFromData = binaryData => {
 
 const fixupBlockJson = blockJson => {
 	if (blockJson.generationHashProof) {
-		blockJson.proofGamma = blockJson.generationHashProof.gamma;
-		blockJson.proofVerificationHash = blockJson.generationHashProof.verificationHash;
-		blockJson.proofScalar = blockJson.generationHashProof.scalar;
+		blockJson.iVrfProofLeaf = blockJson.generationHashProof.leaf;
+		blockJson.iVrfProofPath = blockJson.generationHashProof.path.join('');
 		delete blockJson.generationHashProof;
 	}
 

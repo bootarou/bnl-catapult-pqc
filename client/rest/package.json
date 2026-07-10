@@ -44,7 +44,7 @@
     "node-cache": "^5.1.2",
     "ripemd160": "^2.0.2",
     "sshpk": "^1.17.0",
-    "symbol-sdk": "^3.3.0",
+    "symbol-sdk": "file:../../sdk/javascript",
     "winston": "^3.10.0",
     "ws": "^8.14.2",
     "zeromq": "^6.5.0"
