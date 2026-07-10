@@ -1,0 +1,68 @@
+# Full-stack PQC (ML-DSA-44 + iVRF) catapult network for verification.
+# Brings up: mongo + catapult API node (harvests iVRF blocks) + broker (spool -> mongo) + REST gateway.
+# Reuses the verified PQC artifacts under ./net and the local iVRF/ML-DSA symbol-sdk.
+#   docker compose -f docker-compose.pqc.yml up
+#   curl http://localhost:3000/blocks/1   # block should carry iVrfProofLeaf / iVrfProofPath
+name: bnl-pqc
+
+networks:
+  bnlnet:
+
+services:
+  mongo:
+    image: mongo:5.0.15
+    networks: [bnlnet]
+    command: mongod --wiredTigerCacheSizeGB 1
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 }).ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # catapult API node: harvests iVRF blocks and writes the block/state spool for the broker
+  node-api:
+    image: symbolplatform/symbol-server:gcc-1.0.3.9-bnl
+    user: root
+    networks: [bnlnet]
+    volumes:
+      - ./net/node-api:/node
+    working_dir: /node
+    command: /usr/catapult/bin/catapult.server /node
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  # broker: consumes the API node's spool and projects chain state into mongo
+  broker:
+    image: symbolplatform/symbol-server:gcc-1.0.3.9-bnl
+    user: root
+    networks: [bnlnet]
+    volumes:
+      - ./net/node-api:/node
+    working_dir: /node
+    command: /usr/catapult/bin/catapult.broker /node
+    depends_on:
+      mongo:
+        condition: service_healthy
+      node-api:
+        condition: service_started
+
+  # REST gateway: runs from source against the local iVRF/ML-DSA symbol-sdk
+  rest:
+    image: node:22
+    networks: [bnlnet]
+    working_dir: /symbol/client/rest
+    volumes:
+      - ./symbol:/symbol
+      - ./net/rest/rest.json:/userconfig/rest.json:ro
+      - ./net/rest-cert:/restcerts:ro
+      - ./net/node-api/cert:/apicerts:ro
+      - ./net/node-api/resources:/apiresources:ro
+    command: node src/index.js /userconfig/rest.json
+    ports:
+      - "3000:3000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      node-api:
+        condition: service_started
