@@ -33,20 +33,16 @@ symbolRestImage:   nftdrive/bnl-catapult-rest-pqc:2.4.3-bnl
 
 ---
 
-## 3. プッシュ手順
+## 3. プッシュ状況 — 完了（2026-07-10 検証済み）
 
-再タグは適用済みなので、ログインしてプッシュするだけ。
+両イメージとも Docker Hub へプッシュ済み。Hub 上のトップレベルダイジェストとローカル Image ID の一致を `docker buildx imagetools inspect` で確認した。
 
-```bash
-# ログイン（nftdrive アカウントの認証情報で）
-docker login
+| リポジトリ | ダイジェスト（Hub = ローカル） |
+|---|---|
+| `nftdrive/bnl-catapult-server-pqc:1.0.3.9-bnl` | `sha256:620b960636ed20ce21925586b85fb8ec0052f91d4008ab597ad4770452d6a4f1` |
+| `nftdrive/bnl-catapult-rest-pqc:2.4.3-bnl` | `sha256:570ee2e29bc3b3747c4749cce46f3db6e1aaf99696c3a51765a21deca3c447d6` |
 
-# プッシュ
-docker push nftdrive/bnl-catapult-server-pqc:1.0.3.9-bnl
-docker push nftdrive/bnl-catapult-rest-pqc:2.4.3-bnl
-```
-
-> 認証情報（PAT）は本環境から削除済みのため、`docker login` とプッシュはユーザー側で実施すること。
+> 認証情報（PAT）は本環境から削除済み。再プッシュが必要になった場合は `docker login` から実施すること。
 
 ---
 
@@ -56,7 +52,7 @@ docker push nftdrive/bnl-catapult-rest-pqc:2.4.3-bnl
 
 | イメージ | 用途 |
 |---|---|
-| `nftdrive/bnl-catapult-server:1.0.3.9-cf1` (`bc2c27c3c2a3`) | server イメージのベース（オーバーレイ元） |
+| `nftdrive/bnl-catapult-server:1.0.3.9-cf1` (`bc2c27c3c2a3`) | server イメージのベース（オーバーレイ元）。過去にプッシュ済みで Hub にも存在するが、公開必須ではない |
 | `catapult-server-bnl:local` / `catapult-server-bnl-patched:local` | ビルド中間物 |
 | `nftdrive-bnl-catapult-server-patched:1.0.3.9-cf1` | 同上 |
 | `symbolplatform/symbol-server-build-base:ubuntu-gcc-15-skylake` (14.4 GB) | catapult ビルド用ベース（ソースからビルドする場合のみ必要） |
