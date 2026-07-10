@@ -1,4 +1,4 @@
-# BNL — Post-Quantum Catapult (ML-DSA-44)
+# BNL — Post-Quantum Catapult
 
 > **Disclaimer:** This is an **unofficial, independent post-quantum experimental fork** of the Symbol
 > monorepo. It is **not affiliated with, endorsed by, or connected to** the official Symbol / NEM
@@ -12,137 +12,94 @@
 > 説明する目的でのみ使用しています。本プロジェクトを公式 Symbol ソフトウェアとして扱わないでください。
 > 利用は自己責任でお願いします。
 
-> This is a **post-quantum fork** of the Symbol monorepo. The account signature scheme has been
-> migrated from ed25519 to **ML-DSA-44 (FIPS 204)**, with **ML-KEM-768 (FIPS 203)** for delegated-harvesting
-> key exchange. The VRF (block lottery) and finalization voting remain on ed25519 (hybrid design).
-> This is a **new-chain / hard-fork** change: there is **no backwards compatibility** with the public
-> Symbol network and a **new nemesis block is required**.
+A blockchain node stack whose **entire cryptographic foundation is post-quantum**: account
+signatures, the block lottery (VRF), finalization voting, key exchange, and node-to-node TLS.
+This is a **new-chain / hard-fork** change: there is **no backwards compatibility** with the
+public Symbol network and a **fresh nemesis block is required**.
 
 ## Cryptography
 
-| Purpose | Original | This fork |
-|---|---|---|
-| Account signatures (tx, blocks, cosignatures, TLS certs) | ed25519 | **ML-DSA-44** (FIPS 204) |
-| Delegated-harvesting key exchange | X25519 ECDH | **ML-KEM-768** (FIPS 203) |
-| VRF (block generation lottery) | ed25519 ECVRF | **ed25519 ECVRF (retained)** |
-| Finalization voting | ed25519 | **ed25519 (retained)** |
+| Purpose | Upstream Symbol | This fork | Standard |
+|---|---|---|---|
+| Account signatures (tx, blocks, cosignatures) | ed25519 | **ML-DSA-44** | FIPS 204 |
+| Block-lottery VRF (generation-hash proof) | ed25519 ECVRF | **iVRF** — hash-based indexed VRF (SHA3-256 Merkle tree) | — |
+| Finalization voting | ed25519 (BM tree) | **ML-DSA-44** (BM tree structure retained) | FIPS 204 |
+| Delegated-harvesting key exchange / encrypted messages | X25519 ECDH | **ML-KEM-768** | FIPS 203 |
+| Node-to-node TLS certificates | ed25519 | **ML-DSA-44** | FIPS 204 |
 
-Sizes: `Key` 32 → **1312 B**, `Signature` 64 → **2420 B**. `PrivateKey` stays **32 B** (ML-DSA seed;
-key expansion is deterministic). A separate `VrfPublicKey` (32 B) type is introduced for the retained
-ed25519 VRF path. Backed by OpenSSL 3.5+ (native ML-DSA / ML-KEM); no external PQC library required.
+Sizes: `Key` 32 → **1312 B**, `Signature` 64 → **2420 B**, VRF proof 80 → **1056 B**
+(iVRF leaf + authentication path). `PrivateKey` stays **32 B** (all schemes expand
+deterministically from the seed). Backed by OpenSSL 3.5+ (native ML-DSA / ML-KEM) — no external
+PQC library required in the node. The iVRF security rests on hash assumptions only.
 
 ## What changed
 
-- **crypto core** (`client/catapult/src/catapult/crypto`): `MlDsa.{h,cpp}` (OpenSSL EVP, deterministic
-  signing), `Signer` routed to ML-DSA, ed25519 isolated into `Ed25519Signer.{h,cpp}` for VRF/voting,
-  `SharedKey` → ML-KEM-768, `OpensslKeyUtils` reads ML-DSA PEM keys via octet/seed params, TLS
-  certificates (`CertificateUtils`) switched to ML-DSA-44.
-- **types / wire format**: `types.h` sizes, `catbuffer` schemas (`PublicKey=1312`, `Signature=2420`,
-  new `VrfPublicKey=32`), `NetworkInfo` gains `NemesisSignerVrfPublicKey`.
-- **VRF path** retyped to `VrfKeyPair`/`VrfPublicKey` end-to-end (account state, key-link, harvesting,
-  block processing) while keeping the ECVRF algorithm unchanged.
-- **tools**: `nemgen` (ML-DSA nemesis + `nemesisSignerVrfPrivateKey`), `linker` (VrfKeyLink/VotingKeyLink,
-  live network-time deadline), mongo mappers, and `client/rest` (native-crypto ML-DSA key handling).
-- **Opt-in Chain Finalization**: a `[chain] chainFinalizationHeight` setting (default `0` = disabled)
-  that freezes the chain at a target height (stops harvesting and rejects higher blocks).
+- **crypto core** (`client/catapult/src/catapult/crypto`): `Signer` routed to ML-DSA-44 (OpenSSL
+  EVP, seed-based deterministic keygen), `SharedKey` → ML-KEM-768, TLS certificates
+  (`CertificateUtils`) → ML-DSA-44, new **`iVrf.{h,cpp}`** primitive (configurable-depth SHA3-256
+  Merkle tree; `[chain] iVrfTreeDepth`, `iVrfActivationDelay`).
+- **consensus**: block headers carry a fixed 1056 B iVRF proof; account state stores the
+  registered iVRF root + activation height; `BlockchainProcessor` / `NemesisBlockLoader` verify
+  `index = height − activationHeight`; harvesters cache per-account trees. Finalization voting
+  (`crypto_voting`) signs with ML-DSA-44 inside the retained Bellare-Miner tree.
+- **types / wire format**: `types.h` sizes, `catbuffer` schemas (`PublicKey=1312`,
+  `Signature=2420`, `VrfPublicKey=32` — the VRF public key **is** the iVRF tree root),
+  `NetworkInfo` gains `NemesisSignerVrfPublicKey`.
+- **[@client/rest](client/rest)**: native-crypto ML-DSA key handling (sshpk cannot parse ML-DSA),
+  block routes expose `iVrfProofLeaf` / `iVrfProofPath`.
+- **[@sdk/javascript](sdk/javascript)**: ML-DSA-44 signing, ML-KEM-768 message encryption, `iVrf`
+  module, PQC catbuffer models — byte-compatible with the C++ node. Published standalone as
+  [pqc-catapult-sdk-v3](https://github.com/bootarou/pqc-catapult-sdk-v3).
+- **tools**: `nemgen` (ML-DSA nemesis + iVRF proof at index 0), `linker`, mongo mappers.
+- **Opt-in Chain Finalization**: a `[chain] chainFinalizationHeight` setting (default `0` =
+  disabled) that freezes the chain at a target height.
+
+Not PQC-adapted: [@sdk/python](sdk/python) and the NEM side of the JS SDK remain upstream
+(ed25519) and are not usable against this chain.
 
 ## Verified end-to-end (private network)
 
-New-nemesis ML-DSA network brought up in Docker and validated: single-node boot + block generation,
-2-node sync (matching block hashes), ML-DSA TLS peer handshakes, transfer / **Aggregate Complete** /
-**multisig cosignature** (1312 B key + 2420 B sig) inclusion via **REST `PUT /transactions`**, balance
-changes queryable via REST, **BFT finalization** advancing across nodes (ed25519 voting), and a
-pure-JS transaction signer (`@noble/post-quantum` ml-dsa44, cross-verified against OpenSSL).
+Fresh-nemesis PQC network brought up in Docker and validated on live chains: single-node boot +
+continuous iVRF/ML-DSA harvesting, 2-node sync (matching block hashes and chain scores), ML-DSA
+mutual TLS, transfer / aggregate / multisig-cosignature inclusion via REST `PUT /transactions`,
+full stack (node + broker + mongo + REST) serving iVRF proofs over `GET /blocks/*`, C++ ⇄ JS SDK
+byte-exact cross-checks on real on-chain blocks, and `symbol-bootstrap` operating the network
+with its **unchanged standard CLI** (`config` → `compose` → `up`).
+
+## Documentation
+
+**📘 総括資料 / Work summary: [`PQC-SUMMARY.md`](PQC-SUMMARY.md)**（English: [`PQC-SUMMARY.en.md`](PQC-SUMMARY.en.md)）
+— PQC 移行作業の全体像（暗号構成・設計判断・コンポーネント別変更・検証結果・公開物一覧・残課題・索引）。
+
+**📖 起動マニュアル: [`BNL-STARTUP.md`](BNL-STARTUP.md)** — ビルドから nemesis 生成、
+フルスタック（node ＋ broker ＋ mongo ＋ REST）起動・検証まで（[`docker-compose.pqc.yml`](docker-compose.pqc.yml) を使用）。
+
+**📄 レポート**: [`PQC-VRF-voting-report.md`](PQC-VRF-voting-report.md) — iVRF・ML-DSA 投票 ／
+[`ML-DSA-44-sdk-report.md`](ML-DSA-44-sdk-report.md) — JS SDK ／
+[`PQC-bootstrap-report.md`](PQC-bootstrap-report.md) — `symbol-bootstrap` 対応 ／
+[`PQC-images.md`](PQC-images.md) — Docker イメージ。
 
 ## Build & run
 
 Same toolchain as upstream catapult (see [`client/catapult`](client/catapult)); build inside the
 `symbolplatform/symbol-server-build-base` image with OpenSSL 3.5+. Requires a fresh nemesis
-(`tools/nemgen`) — the public Symbol network cannot be joined.
+(`tools/nemgen`) — the public Symbol network cannot be joined. Prebuilt runtime images are on
+Docker Hub (see below), and [`BNL-STARTUP.md`](BNL-STARTUP.md) walks through the full bring-up.
 
-**📘 総括資料: [`PQC-SUMMARY.md`](PQC-SUMMARY.md)**（English: [`PQC-SUMMARY.en.md`](PQC-SUMMARY.en.md)） — PQC 移行作業の全体像（暗号構成・設計判断・
-コンポーネント別変更・検証結果・公開物一覧・残課題・ドキュメント索引）。
+## PQC ecosystem
 
-**📖 起動マニュアル: [`BNL-STARTUP.md`](BNL-STARTUP.md)** — ビルドから nemesis 生成、
-フルスタック（node ＋ broker ＋ mongo ＋ REST）起動・検証まで（[`docker-compose.pqc.yml`](docker-compose.pqc.yml) を使用）。
+| Repository / image | Contents |
+|---|---|
+| **this repo** — [bnl-catapult-pqc](https://github.com/bootarou/bnl-catapult-pqc) | Monorepo: catapult-server, REST gateway, JS SDK (source of truth), catbuffer schemas, docs |
+| [pqc-catapult-sdk-v3](https://github.com/bootarou/pqc-catapult-sdk-v3) | Standalone JS SDK v3 — `npm i github:bootarou/pqc-catapult-sdk-v3#feat-pqc` |
+| [pqc-catapult-sdk-v2](https://github.com/bootarou/pqc-catapult-sdk-v2) | PQC build of the legacy symbol-sdk 2.x line (used by the explorer) |
+| [pqc-catapult-explorer](https://github.com/bootarou/pqc-catapult-explorer) | Block explorer (iVRF proof display) |
+| [symbol-bootstrap](https://github.com/bootarou/symbol-bootstrap) (`pqc-bootstrap`) | Network generation / operation CLI with PQC support |
+| `nftdrive/bnl-catapult-server-pqc:1.0.3.9-bnl` | Docker: catapult server + broker |
+| `nftdrive/bnl-catapult-rest-pqc:2.4.3-bnl` | Docker: REST gateway |
 
-**📄 レポート**: [`PQC-bootstrap-report.md`](PQC-bootstrap-report.md) — `symbol-bootstrap` の標準コマンドで PQC チェーンを運用する対応と検証結果 ／ [`PQC-VRF-voting-report.md`](PQC-VRF-voting-report.md) — iVRF・ML-DSA 投票 ／ [`ML-DSA-44-sdk-report.md`](ML-DSA-44-sdk-report.md) — JS SDK。
+## Upstream
 
----
-
-# Symbol Monorepo
-
-In Q1 2021, we consolidated a number of projects into this repository.
-It includes our specialized binary payload DSL (parser and schemas), clients and sdks.
-
-| component | lint | build | test | coverage | package |
-|-----------|------|-------|------|----------| ------- |
-| [@catbuffer/parser](catbuffer/parser) | [![lint][catbuffer-parser-lint]][catbuffer-job] || [![test][catbuffer-parser-test]][catbuffer-job] <br> [![vectors][catbuffer-parser-vectors]][catbuffer-job] | [![][catbuffer-parser-cov]][catbuffer-parser-cov-link] | [![][catbuffer-package]][catbuffer-package-link] |
-|||||||
-| [@client/catapult](client/catapult) | [![lint][client-catapult-lint]][client-catapult-job] | [![build][client-catapult-build]][client-catapult-job] | [![build][client-catapult-test]][client-catapult-job] | [![][client-catapult-cov]][client-catapult-cov-link] |
-| [@client/rest](client/rest) | [![lint][client-rest-lint]][client-rest-job] || [![test][client-rest-test]][client-rest-job] | [![][client-rest-cov]][client-rest-cov-link] |
-|||||||
-| [@sdk/javascript](sdk/javascript) | [![lint][sdk-javascript-lint]][sdk-javascript-job] | [![build][sdk-javascript-build]][sdk-javascript-job] | [![test][sdk-javascript-test]][sdk-javascript-job] <br> [![examples][sdk-javascript-examples]][sdk-javascript-job] <br> [![vectors][sdk-javascript-vectors]][sdk-javascript-job] | [![][sdk-javascript-cov]][sdk-javascript-cov-link] | [![][sdk-javascript-package]][sdk-javascript-package-link] |
-| [@sdk/python](sdk/python) | [![lint][sdk-python-lint]][sdk-python-job] | [![build][sdk-python-build]][sdk-python-job] | [![test][sdk-python-test]][sdk-python-job] <br> [![examples][sdk-python-examples]][sdk-python-job] <br> [![vectors][sdk-python-vectors]][sdk-python-job] | [![][sdk-python-cov]][sdk-python-cov-link] | [![][sdk-python-package]][sdk-python-package-link] |
-|||||||
-| [@linters](linters) | [![lint][linters-lint]][linters-job] |||||
-| [@jenkins](jenkins) | [![lint][jenkins-lint]][jenkins-job] |||||
-
-## Full Coverage Report
-
-Detailed version can be seen on [codecov.io][symbol-cov-link].
-
-[![][symbol-cov]][symbol-cov-link]
-
-[symbol-cov]: https://codecov.io/gh/symbol/symbol/branch/dev/graphs/tree.svg
-[symbol-cov-link]: https://codecov.io/gh/symbol/symbol/tree/dev
-
-[catbuffer-job]: https://jenkins.symbolsyndicate.us/blue/organizations/jenkins/Symbol%2Fgenerated%2Fsymbol%2Fcatbuffer-parser/activity/?branch=dev
-[catbuffer-parser-lint]: https://jenkins.symbolsyndicate.us/buildStatus/icon?job=Symbol%2Fgenerated%2Fsymbol%2Fcatbuffer-parser%2Fdev%2F&config=catbuffer-parser-lint
-[catbuffer-parser-test]: https://jenkins.symbolsyndicate.us/buildStatus/icon?job=Symbol%2Fgenerated%2Fsymbol%2Fcatbuffer-parser%2Fdev%2F&config=catbuffer-parser-test
-[catbuffer-parser-vectors]: https://jenkins.symbolsyndicate.us/buildStatus/icon?job=Symbol%2Fgenerated%2Fsymbol%2Fcatbuffer-parser%2Fdev%2F&config=catbuffer-parser-vectors
-[catbuffer-parser-cov]: https://codecov.io/gh/symbol/symbol/branch/dev/graph/badge.svg?token=SSYYBMK0M7&flag=catbuffer-parser
-[catbuffer-parser-cov-link]: https://codecov.io/gh/symbol/symbol/tree/dev/catbuffer/parser
-[catbuffer-package]: https://img.shields.io/pypi/v/catparser
-[catbuffer-package-link]: https://pypi.org/project/catparser
-
-[client-catapult-job]: https://jenkins.symbolsyndicate.us/blue/organizations/jenkins/Symbol%2Fgenerated%2Fsymbol%2Fclient-catapult/activity?branch=dev
-[client-catapult-lint]: https://jenkins.symbolsyndicate.us/buildStatus/icon?job=Symbol%2Fgenerated%2Fsymbol%2Fclient-catapult%2Fdev%2F&config=client-catapult-lint
-[client-catapult-build]: https://jenkins.symbolsyndicate.us/buildStatus/icon?job=Symbol%2Fgenerated%2Fsymbol%2Fclient-catapult%2Fdev%2F&config=client-catapult-build
-[client-catapult-test]: https://jenkins.symbolsyndicate.us/buildStatus/icon?job=Symbol%2Fgenerated%2Fsymbol%2Fclient-catapult%2Fdev%2F&config=client-catapult-test
-[client-catapult-cov]: https://codecov.io/gh/symbol/symbol/branch/dev/graph/badge.svg?token=SSYYBMK0M7&flag=client-catapult
-[client-catapult-cov-link]: https://codecov.io/gh/symbol/symbol/tree/dev/client/catapult
-
-[client-rest-job]: https://jenkins.symbolsyndicate.us/blue/organizations/jenkins/Symbol%2Fgenerated%2Fsymbol%2Fclient-rest/activity?branch=dev
-[client-rest-lint]: https://jenkins.symbolsyndicate.us/buildStatus/icon?job=Symbol%2Fgenerated%2Fsymbol%2Fclient-rest%2Fdev%2F&config=client-rest-lint
-[client-rest-test]: https://jenkins.symbolsyndicate.us/buildStatus/icon?job=Symbol%2Fgenerated%2Fsymbol%2Fclient-rest%2Fdev%2F&config=client-rest-test
-[client-rest-cov]: https://codecov.io/gh/symbol/symbol/branch/dev/graph/badge.svg?token=SSYYBMK0M7&flag=client-rest
-[client-rest-cov-link]: https://codecov.io/gh/symbol/symbol/tree/dev/client/rest
-
-[sdk-javascript-job]: https://jenkins.symbolsyndicate.us/blue/organizations/jenkins/Symbol%2Fgenerated%2Fsymbol%2Fsdk-javascript/activity?branch=dev
-[sdk-javascript-lint]: https://jenkins.symbolsyndicate.us/buildStatus/icon?job=Symbol%2Fgenerated%2Fsymbol%2Fsdk-javascript%2Fdev%2F&config=sdk-javascript-lint
-[sdk-javascript-build]: https://jenkins.symbolsyndicate.us/buildStatus/icon?job=Symbol%2Fgenerated%2Fsymbol%2Fsdk-javascript%2Fdev%2F&config=sdk-javascript-build
-[sdk-javascript-test]: https://jenkins.symbolsyndicate.us/buildStatus/icon?job=Symbol%2Fgenerated%2Fsymbol%2Fsdk-javascript%2Fdev%2F&config=sdk-javascript-test
-[sdk-javascript-examples]: https://jenkins.symbolsyndicate.us/buildStatus/icon?job=Symbol%2Fgenerated%2Fsymbol%2Fsdk-javascript%2Fdev%2F&config=sdk-javascript-examples
-[sdk-javascript-vectors]: https://jenkins.symbolsyndicate.us/buildStatus/icon?job=Symbol%2Fgenerated%2Fsymbol%2Fsdk-javascript%2Fdev%2F&config=sdk-javascript-vectors
-[sdk-javascript-cov]: https://codecov.io/gh/symbol/symbol/branch/dev/graph/badge.svg?token=SSYYBMK0M7&flag=sdk-javascript
-[sdk-javascript-cov-link]: https://codecov.io/gh/symbol/symbol/tree/dev/sdk/javascript
-[sdk-javascript-package]: https://img.shields.io/npm/v/symbol-sdk-javascript
-[sdk-javascript-package-link]: https://www.npmjs.com/package/symbol-sdk-javascript
-
-[sdk-python-job]: https://jenkins.symbolsyndicate.us/blue/organizations/jenkins/Symbol%2Fgenerated%2Fsymbol%2Fsdk-python/activity?branch=dev
-[sdk-python-lint]: https://jenkins.symbolsyndicate.us/buildStatus/icon?job=Symbol%2Fgenerated%2Fsymbol%2Fsdk-python%2Fdev%2F&config=sdk-python-lint
-[sdk-python-build]: https://jenkins.symbolsyndicate.us/buildStatus/icon?job=Symbol%2Fgenerated%2Fsymbol%2Fsdk-python%2Fdev%2F&config=sdk-python-build
-[sdk-python-test]: https://jenkins.symbolsyndicate.us/buildStatus/icon?job=Symbol%2Fgenerated%2Fsymbol%2Fsdk-python%2Fdev%2F&config=sdk-python-test
-[sdk-python-examples]: https://jenkins.symbolsyndicate.us/buildStatus/icon?job=Symbol%2Fgenerated%2Fsymbol%2Fsdk-python%2Fdev%2F&config=sdk-python-examples
-[sdk-python-vectors]: https://jenkins.symbolsyndicate.us/buildStatus/icon?job=Symbol%2Fgenerated%2Fsymbol%2Fsdk-python%2Fdev%2F&config=sdk-python-vectors
-[sdk-python-cov]: https://codecov.io/gh/symbol/symbol/branch/dev/graph/badge.svg?token=SSYYBMK0M7&flag=sdk-python
-[sdk-python-cov-link]: https://codecov.io/gh/symbol/symbol/tree/dev/sdk/python
-[sdk-python-package]: https://img.shields.io/pypi/v/symbol-sdk-python
-[sdk-python-package-link]: https://pypi.org/project/symbol-sdk-python
-
-[jenkins-job]: https://jenkins.symbolsyndicate.us/blue/organizations/jenkins/Symbol%2Fgenerated%2Fsymbol%2Fjenkins/activity?branch=dev
-[jenkins-lint]: https://jenkins.symbolsyndicate.us/buildStatus/icon?job=Symbol%2Fgenerated%2Fsymbol%2Fjenkins%2Fdev%2F&config=jenkins-lint
-
-[linters-job]: https://jenkins.symbolsyndicate.us/blue/organizations/jenkins/Symbol%2Fgenerated%2Fsymbol%2Flinters/activity?branch=dev
-[linters-lint]: https://jenkins.symbolsyndicate.us/buildStatus/icon?job=Symbol%2Fgenerated%2Fsymbol%2Flinters%2Fdev%2F&config=linters-lint
+Forked from the [Symbol monorepo](https://github.com/symbol/symbol) (`dev`). The upstream CI /
+coverage badges and package links were removed from this README because they describe the
+official project, not this fork.
