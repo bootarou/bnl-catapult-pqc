@@ -2,8 +2,8 @@
 
 **Scope**: BNL — Post-Quantum Catapult (an unofficial, experimental fork of Symbol/catapult; unaffiliated with official Symbol/NEM)
 **Period**: 2026-07-05 — 2026-07-10
-**Date**: 2026-07-10
-**Status**: All components implemented, verified on live chains, and published
+**Date**: 2026-07-10 (last updated 2026-07-11)
+**Status**: All components implemented, verified on live chains, and published (incl. launcher and Explorer SMD work)
 
 日本語版: [`PQC-SUMMARY.md`](PQC-SUMMARY.md)
 
@@ -57,6 +57,8 @@ chains is impossible; the design assumes a **new network bootstrapped from a fre
 | 07-09–10 | Consensus PQC | Voting to ML-DSA, iVRF primitive → consensus integration → **two-node live-chain verification** |
 | 07-10 | Full stack & operations | docker-compose end-to-end verification, symbol-bootstrap standard-CLI support, SDK ML-KEM message encryption |
 | 07-10 | Publication | 2 Docker Hub images, 4 GitHub repositories (catapult / SDK / explorer / bootstrap) |
+| 07-11 | Launcher | BNL (blockchain-network-launcher) reworked into a **PQC-only launcher**; 8-item acceptance run passed. **First live-chain verification of ML-DSA voting keys** |
+| 07-11 | Explorer SMD | Merged the SMD feature set (explorer-smd `main`) into the PQC explorer; removed official logos/favicons; fixed SPA/REST routing |
 
 ---
 
@@ -159,12 +161,26 @@ PQC networks can now be generated and operated **without changing how the tool i
 - `rest.json.mustache`: added `routeExtensions: []` (required by the PQC REST 2.5.1 line)
 - `presets/shared.yml`: references the PQC images (`nftdrive/bnl-catapult-*-pqc`)
 
+**Added for the launcher work (2026-07-11)**: rewrote `VotingUtils` for **ML-DSA-44 voting key
+trees** (root public key 1312 B / signatures 2420 B, header 48+1312 — the classic ed25519 size
+check rejected the PQC `catapult.tools.votingkey` output of 1,766,800 B; voting-enabled nodes
+were the one previously untested path). Also declared phantom dependencies (`tweetnacl` /
+`symbol-openapi-typescript-fetch-client`) and restored the executable bit on `bin/run`.
+
 ### 3-5. Explorer (published: `pqc-catapult-explorer`, branch `feat-pqc`)
 
-- Displays iVRF block proofs; switched to the PQC symbol-sdk
-- `symbol-sdk` dependency changed from a `file:` reference to
-  `github:bootarou/pqc-catapult-sdk-v2#feat-pqc`; clone-from-GitHub → `npm install` →
-  `npm run build` verified
+- Displays iVRF block proofs (`proofGamma` fields removed in favour of
+  `iVrfProofLeaf`/`iVrfProofPath`); uses the PQC symbol-sdk v2
+  (`github:bootarou/pqc-catapult-sdk-v2#feat-pqc`)
+- **SMD integration (2026-07-11)**: merged the SMD feature set from explorer-smd `main`
+  (social metadata, SMD list page, mosaic holder list / transaction history). `feat-pqc` is now
+  the **NFTDrive SMD edition + PQC** combined build (plan & verification: `PQC-SMD-PLAN.md`
+  in the repo)
+- **Trademark cleanup**: official Symbol logos (header wordmark, 3 menu marks) replaced with a
+  "BNL PQC" text brand; the official favicon set removed. Footer links only the BNL repo
+- The SMD transaction lists were the first code path to render nemesis key-link transactions,
+  exposing a hardcoded 64-hex `linkedPublicKey` validation in SDK v2 → **fixed to accept
+  2624-hex ML-DSA keys** (Account/Node/Voting links; VRF stays 64 hex for the 32 B root)
 
 ### 3-6. Supporting tools (outside the repo, `/home/user/catapult/`)
 
@@ -175,6 +191,30 @@ PQC networks can now be generated and operated **without changing how the tool i
 | `net/` | Experimental network assets (keys, ML-DSA certificates, configs, nemesis seed, per-node data) |
 | `build-target.sh` / `build-bnl-image.sh` | Individual-target / release-image builds |
 | `docker-compose.pqc.yml` | Full-stack bring-up: mongo + node-api + broker + REST (also bundled in this repo) |
+
+### 3-7. BNL launcher (blockchain-network-launcher, branch `feat-PQC-custom-catapult`)
+
+A **PQC-only launcher** for building and operating PQC networks from a Web UI (deliberately
+PQC-only rather than a classic/PQC toggle; rationale, plan and acceptance record live in the
+launcher repo's `docs/PQC-LAUNCHER-PLAN.md`). **This branch is never merged into main/dev.**
+
+- **pqc-bootstrap baked into the image**: git clone + `npm install --omit=dev` + bin symlink
+  instead of the unreliable `npm install -g <git-url>` (npm 10.8 symlink bug, `files`
+  whitelist, prepack). Build-time sanity checks assert the ML-DSA edition; at runtime the
+  npx-cache / registry fallbacks are removed so a classic ed25519 bootstrap can never run silently
+- **Single built-in catapult version `pqc`** (`nftdrive/bnl-catapult-*-pqc` images);
+  `chainFinalizationHeight` promoted to a Configuration-UI setting
+- **PQC-only UI**: joining official mainnet/testnet is refused at import time, 2624-hex public
+  keys are truncated for display, rebranded as "BNL Post-Quantum Network Manager"
+- **Explorer integration**: builds and runs `pqc-catapult-explorer#feat-pqc`. The generated
+  image/proxy gained ① branch-tip cache-busting, ② a multi-stage build (deps unchanged →
+  `npm install` cached; no-change rebuilds ~5 s, source-only ~2–3 min), ③ **Accept-header
+  SPA/REST routing** (resolves the history-mode SPA vs REST path collision; also cherry-picked
+  to the classic `main`/`feat-custom-catapult` branches), ④ no-cache headers for HTML/`/config`
+- **Acceptance run (8/8 passed)**: network creation via the UI API → iVRF/ML-DSA harvesting →
+  exact freeze at `chainFinalizationHeight=15` → stop/resume → backup → Explorer browsing.
+  **First live-chain verification of a voting-enabled node (ML-DSA voting key generation +
+  nemesis link)**
 
 ---
 
@@ -192,6 +232,8 @@ PQC networks can now be generated and operated **without changing how the tool i
 | 8 | ML-KEM message-encryption interop | ✅ | noble ⇄ OpenSSL shared secrets match, AES-GCM tamper detection, delegation round-trip |
 | 9 | Full stack (node+broker+mongo+REST) | ✅ | `GET /blocks/2` returns the iVRF proof; `/chain/info` height advances |
 | 10 | PQC network via standard symbol-bootstrap commands | ✅ | `config -a dual` → `compose` → `up` mines past height 155, zero errors |
+| 11 | BNL launcher acceptance (8 items) | ✅ | UI-driven network creation / iVRF harvesting / freeze at height 15 (4×30 s checks) / resume / backup with ML-DSA keys |
+| 12 | SMD Explorer on a live chain | ✅ | Holder list returns 2624-hex ML-DSA public keys, iVRF proofs shown, key-link transaction lists render (after the SDK fix) |
 
 ---
 
@@ -204,8 +246,9 @@ PQC networks can now be generated and operated **without changing how the tool i
 | [bnl-catapult-pqc](https://github.com/bootarou/bnl-catapult-pqc) | `feat-VRF/votiong` | Main monorepo (catapult-server / REST / SDK / docs) |
 | [pqc-catapult-sdk-v3](https://github.com/bootarou/pqc-catapult-sdk-v3) | `feat-pqc` | **JavaScript SDK v3** (extracted from the monorepo's `sdk/javascript` with full history; pure ESM, no build step, installable via `npm i github:bootarou/pqc-catapult-sdk-v3#feat-pqc`) |
 | [pqc-catapult-sdk-v2](https://github.com/bootarou/pqc-catapult-sdk-v2) | `feat-pqc` | TypeScript SDK v2 (PQC build of the legacy symbol-sdk 2.x line, used by the explorer; usable as an npm git dependency) |
-| [pqc-catapult-explorer](https://github.com/bootarou/pqc-catapult-explorer) | `feat-pqc` | Block explorer (iVRF proof display) |
+| [pqc-catapult-explorer](https://github.com/bootarou/pqc-catapult-explorer) | `feat-pqc` | Block explorer (**NFTDrive SMD edition + PQC combined**; iVRF proof display, official trademarks removed) |
 | [symbol-bootstrap](https://github.com/bootarou/symbol-bootstrap) | `pqc-bootstrap` | PQC support for the network-generation/operation CLI |
+| [blockchain-network-launcher](https://github.com/bootarou/blockchain-network-launcher) | `feat-PQC-custom-catapult` | **PQC-only edition of the BNL launcher** (Web UI; independent branch, never merged into main) |
 
 ### Docker Hub (namespace: `nftdrive`, linux/amd64)
 
@@ -248,7 +291,7 @@ mongo uses the unmodified official `mongo:5.0.15` (not pushed). Details: [`PQC-i
 | # | Item | Status |
 |---|---|---|
 | 1 | crypto gtests / SDK test vectors still assume ed25519 | Not updated (runtime covered by e2e). Proper fix: switch to NIST ACVP vectors |
-| 2 | Live-chain verification of iVRF + BFT **with finalization/voting enabled** | Not done (voting verified at library level and cross-checked with the SDK) |
+| 2 | Live-chain observation of BFT finality **epoch progression** | Not done (ML-DSA voting key generation, nemesis link and harvesting on a voting-enabled node were verified live via the launcher; the test chain froze at chainFinalizationHeight before reaching epoch 2, so only the progression itself remains unobserved) |
 | 3 | State-hash equality with `enableVerifiableState=true` | Not done (block-hash equality confirmed) |
 | 4 | Operational test of re-registration at iVRF window expiry (2^16 blocks) | Not done (mechanism implemented) |
 | 5 | Distribution channel for ML-KEM public keys (1184 B) | Not derivable from the account public key; on-chain publication mechanism not designed |
@@ -278,3 +321,9 @@ mongo uses the unmodified official `mongo:5.0.15` (not pushed). Details: [`PQC-i
 | `ML-DSA-44-bootstrap-report.md` | Groundwork and proven code for the bootstrap ML-DSA support |
 | `VRF-PQ-interim-options.md` | Survey of interim PQ options for the VRF (basis for adopting iVRF) |
 | `FN-DSA-migration-diff.md` | ML-DSA-44 vs FN-DSA-512 differential study (basis for the algorithm choice) |
+
+### Plan / verification records in other repositories
+| Document | Contents |
+|---|---|
+| [launcher `docs/PQC-LAUNCHER-PLAN.md`](https://github.com/bootarou/blockchain-network-launcher/blob/feat-PQC-custom-catapult/docs/PQC-LAUNCHER-PLAN.md) | PQC-only launcher plan + acceptance results |
+| [explorer `PQC-SMD-PLAN.md`](https://github.com/bootarou/pqc-catapult-explorer/blob/feat-pqc/PQC-SMD-PLAN.md) | SMD integration plan + verification results |
