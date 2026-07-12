@@ -16,7 +16,7 @@
 - **手数料はサイズ課金のため同倍率で増加**（transfer 最小手数料 約 21.7 倍）
 - 既定設定のままでは **`maxTransactionsPerBlock = 6,000` は実効不能**（理論最大ブロック 22.9 MB が
   `maxBlockCacheSize = 10MB` を超過）。実効上限は **約 2,600 tx/block（≒ 87 TPS）**
-- 副次成果: **ML-DSA ファイナリティ証明を実チェーンで初観測**（エポック 1→2 進行、proof = 15,320 B/エポック）
+
 
 ---
 
@@ -107,17 +107,8 @@
 3. 集約 Tx を多用する設計では **連署 3,740 B/件** が支配的コストになる点を考慮
    （`maxCosignaturesPerAggregate = 25` 満載で連署だけで 93.5 KB）
 
-## 6. 副次成果: BFT ファイナリティのエポック進行を初観測
 
-本調査中、チェーンが凍結高さ（当時 15、現在 6000 に変更済み）を越えて進行したことで、
-**ML-DSA 投票によるファイナリティがエポック 1 → 2 へ進む様子を実チェーンで初めて観測**した:
-
-- `latestFinalizedBlock`: 高さ 8 / エポック 2・ポイント 1（REST `/chain/info`）
-- エポック 2 の証明ファイル `00002.proof` = **15,320 B**（ML-DSA BM ツリー署名を含む実物）
-
-これにより、総括資料（PQC-SUMMARY）§7 に残っていた「BFT エポック進行の観測」が解消された。
-
-## 7. 測定方法（再現手順）
+## 6. 測定方法（再現手順）
 
 - ワイヤ理論値: PQC SDK v3（`pqc-catapult-sdk-v3#feat-pqc`）の catbuffer モデルで `tx.size` を算出
 - ブロックファイル: `fileDatabaseBatchSize = 1` のため `data/00000/NNNNN.dat` = 1 ブロック。`stat -c%s` で実測
