@@ -291,12 +291,13 @@ mongo uses the unmodified official `mongo:5.0.15` (not pushed). Details: [`PQC-i
 | # | Item | Status |
 |---|---|---|
 | 1 | crypto gtests / SDK test vectors still assume ed25519 | Not updated (runtime covered by e2e). Proper fix: switch to NIST ACVP vectors |
-| 2 | Live-chain observation of BFT finality **epoch progression** | Not done (ML-DSA voting key generation, nemesis link and harvesting on a voting-enabled node were verified live via the launcher; the test chain froze at chainFinalizationHeight before reaching epoch 2, so only the progression itself remains unobserved) |
+| 2 | ~~Live-chain observation of BFT finality epoch progression~~ | **Resolved (2026-07-12)**: observed epoch 1→2 with a real ML-DSA finalization proof (15,320 B) — see `PQC-size-report.md` §6 |
 | 3 | State-hash equality with `enableVerifiableState=true` | Not done (block-hash equality confirmed) |
 | 4 | Operational test of re-registration at iVRF window expiry (2^16 blocks) | Not done (mechanism implemented) |
 | 5 | Distribution channel for ML-KEM public keys (1184 B) | Not derivable from the account public key; on-chain publication mechanism not designed |
 | 6 | Image-size reduction (server 3.95 GB), arm64 multi-arch | Not started (`PQC-images.md` §5) |
 | 7 | Default `iVrfActivationDelay` for grinding resistance | 0 (disabled). Production deployments should set a delay comparable to importance grouping |
+| 8 | Capacity presets (`maxTransactionsPerBlock` 6,000 is inconsistent with `maxBlockCacheSize` 10 MB under PQC sizes) | Open; recommended values in `PQC-size-report.md` §5 |
 
 ---
 
@@ -311,6 +312,7 @@ mongo uses the unmodified official `mongo:5.0.15` (not pushed). Details: [`PQC-i
 | [`ML-DSA-44-sdk-report.md`](ML-DSA-44-sdk-report.md) | JS SDK (signing, catbuffer, ML-KEM message encryption) |
 | [`PQC-bootstrap-report.md`](PQC-bootstrap-report.md) | symbol-bootstrap support and verification |
 | [`PQC-images.md`](PQC-images.md) | Docker image inventory and publication status |
+| [`PQC-size-report.md`](PQC-size-report.md) | Measured block/tx/storage sizes, growth projections, and config-limit consistency (Japanese) |
 
 ### Working directory (`/home/user/catapult/`, research/work records outside the repo; Japanese)
 | Document | Contents |
