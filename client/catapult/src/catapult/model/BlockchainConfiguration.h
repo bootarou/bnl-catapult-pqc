@@ -32,6 +32,22 @@
 
 namespace catapult { namespace model {
 
+	/// Policy controlling harvesting of blocks that contain no transactions.
+	enum class EmptyBlockPolicyMode {
+		/// Empty blocks are harvested normally (legacy behavior).
+		Normal,
+
+		/// Harvest attempts are skipped while there are no pending transactions.
+		Suppress,
+
+		/// Like Suppress, but an empty heartbeat block is harvested once
+		/// EmptyBlockHeartbeatInterval has elapsed since the last block.
+		Heartbeat
+	};
+
+	/// Tries to parse \a policyName into empty block \a policy.
+	bool TryParseValue(const std::string& policyName, EmptyBlockPolicyMode& policy);
+
 	/// Blockchain configuration settings.
 	struct BlockchainConfiguration {
 	public:
@@ -140,6 +156,18 @@ namespace catapult { namespace model {
 		/// Number of blocks between confirmation of a VRF (iVRF root) registration and its activation.
 		/// The activation delay prevents grinding on which root will win future block lotteries.
 		uint32_t IVrfActivationDelay;
+
+		/// Policy controlling harvesting of blocks that contain no transactions.
+		/// Suppressing empty blocks reduces storage, sync, backup and verification costs;
+		/// on the PQC chain it additionally avoids publishing ML-DSA signatures and iVRF proofs
+		/// (and revealing iVRF leaves) for blocks that carry no data.
+		/// \note Defaults to Normal, which preserves legacy behavior.
+		EmptyBlockPolicyMode EmptyBlockPolicy;
+
+		/// Maximum time since the last block before a Heartbeat-mode harvester produces
+		/// an empty block despite the suppression policy.
+		/// \note Only used when EmptyBlockPolicy is Heartbeat.
+		utils::TimeSpan EmptyBlockHeartbeatInterval;
 
 	public:
 		/// Fork heights configuration.

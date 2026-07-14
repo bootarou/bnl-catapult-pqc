@@ -86,6 +86,12 @@ namespace catapult { namespace extensions {
 	}
 
 	predicate<> CreateShouldProcessTransactionsPredicate(const ServiceState& state) {
+		// when empty blocks are suppressed, a stale last block is the expected steady state of an idle chain,
+		// so its age cannot be used as an (un)synced signal; process transactions unconditionally
+		// (otherwise an idle chain deadlocks: no transactions => no blocks => stale chain => transactions rejected)
+		if (model::EmptyBlockPolicyMode::Normal != state.config().Blockchain.EmptyBlockPolicy)
+			return []() { return true; };
+
 		auto maxTimeBehind = state.config().Node.MaxTimeBehindPullTransactionsStart;
 		return [maxTimeBehind, &storage = state.storage(), timeSupplier = state.timeSupplier()]() {
 			return LoadLastBlockTimestamp(storage) + maxTimeBehind >= timeSupplier();

@@ -259,10 +259,15 @@ namespace catapult { namespace extensions {
 	// region CreateShouldProcessTransactionsPredicate
 
 	namespace {
-		bool RunTransactionPullPredicateTest(Timestamp networkTime, Timestamp lastBlockTime, const utils::TimeSpan& maxTimeBehind) {
+		bool RunTransactionPullPredicateTest(
+				Timestamp networkTime,
+				Timestamp lastBlockTime,
+				const utils::TimeSpan& maxTimeBehind,
+				model::EmptyBlockPolicyMode emptyBlockPolicy = model::EmptyBlockPolicyMode::Normal) {
 			// Arrange:
 			test::ServiceTestState testState(cache::CatapultCache({}), [networkTime]() { return networkTime; });
 			const_cast<utils::TimeSpan&>(testState.state().config().Node.MaxTimeBehindPullTransactionsStart) = maxTimeBehind;
+			const_cast<model::EmptyBlockPolicyMode&>(testState.state().config().Blockchain.EmptyBlockPolicy) = emptyBlockPolicy;
 
 			// - storage already contains nemesis block (height 1)
 			{
@@ -291,6 +296,23 @@ namespace catapult { namespace extensions {
 		EXPECT_TRUE(RunTransactionPullPredicateTest(Timestamp(60 * 1000 + 1), Timestamp(60 * 1000), utils::TimeSpan::FromSeconds(30)));
 		EXPECT_TRUE(RunTransactionPullPredicateTest(Timestamp(90 * 1000), Timestamp(60 * 1000), utils::TimeSpan::FromSeconds(30)));
 		EXPECT_FALSE(RunTransactionPullPredicateTest(Timestamp(90 * 1000 + 1), Timestamp(60 * 1000), utils::TimeSpan::FromSeconds(30)));
+	}
+
+	TEST(TEST_CLASS, ShouldProcessTransactionsPredicateIgnoresLastBlockAgeWhenEmptyBlocksAreSuppressed) {
+		// Assert: an idle chain with a suppressing policy has a stale last block by design,
+		//         so transactions must be processed regardless of how far behind the chain is
+		for (auto policy : { model::EmptyBlockPolicyMode::Suppress, model::EmptyBlockPolicyMode::Heartbeat }) {
+			EXPECT_TRUE(RunTransactionPullPredicateTest(
+					Timestamp(90 * 1000 + 1),
+					Timestamp(60 * 1000),
+					utils::TimeSpan::FromSeconds(30),
+					policy)) << static_cast<int>(policy);
+			EXPECT_TRUE(RunTransactionPullPredicateTest(
+					Timestamp(1'000'000 * 1000ull),
+					Timestamp(60 * 1000),
+					utils::TimeSpan::FromSeconds(30),
+					policy)) << static_cast<int>(policy);
+		}
 	}
 
 	// endregion

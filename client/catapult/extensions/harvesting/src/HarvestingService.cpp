@@ -134,9 +134,13 @@ namespace catapult { namespace harvesting {
 
 			auto pUnlockedAccounts = unlockedAccountsHolder.pUnlockedAccounts;
 			auto blockGenerator = CreateHarvesterBlockGenerator(strategy, transactionRegistry, utFacadeFactory, utCache);
+			// the count supplier drives the empty block policy; capturing utCache by reference is safe
+			// because the cache outlives the harvesting task (both are owned by the service state)
+			auto utCountSupplier = [&utCache]() { return utCache.view().size(); };
 			auto pHarvesterTask = std::make_shared<ScheduledHarvesterTask>(
 					CreateHarvesterTaskOptions(state),
-					std::make_unique<Harvester>(cache, blockchainConfig, beneficiaryAddress, *pUnlockedAccounts, blockGenerator));
+					std::make_unique<Harvester>(
+							cache, blockchainConfig, beneficiaryAddress, *pUnlockedAccounts, blockGenerator, utCountSupplier));
 
 			auto pUnlockedAccountsUpdater = unlockedAccountsHolder.pUnlockedAccountsUpdater;
 			return thread::CreateNamedTask("harvesting task", [pUnlockedAccountsUpdater, pHarvesterTask]() {

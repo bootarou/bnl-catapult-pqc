@@ -23,11 +23,28 @@
 #include "Address.h"
 #include "catapult/utils/ConfigurationBag.h"
 #include "catapult/utils/ConfigurationUtils.h"
+#include "catapult/utils/ConfigurationValueParsers.h"
 #include "catapult/utils/HexParser.h"
 
 DEFINE_ADDRESS_CONFIGURATION_VALUE_SUPPORT
 
 namespace catapult { namespace model {
+
+	// region EmptyBlockPolicyMode
+
+	namespace {
+		const std::array<std::pair<const char*, EmptyBlockPolicyMode>, 3> String_To_Empty_Block_Policy_Mode_Pairs{{
+			{ "normal", EmptyBlockPolicyMode::Normal },
+			{ "suppress", EmptyBlockPolicyMode::Suppress },
+			{ "heartbeat", EmptyBlockPolicyMode::Heartbeat }
+		}};
+	}
+
+	bool TryParseValue(const std::string& policyName, EmptyBlockPolicyMode& policy) {
+		return utils::TryParseEnumValue(String_To_Empty_Block_Policy_Mode_Pairs, policyName, policy);
+	}
+
+	// endregion
 
 	// region BlockchainConfiguration
 
@@ -167,6 +184,20 @@ namespace catapult { namespace model {
 		config.IVrfActivationDelay = 0;
 		if (bag.contains(utils::ConfigurationKey("chain", "iVrfActivationDelay"))) {
 			LOAD_CHAIN_PROPERTY(IVrfActivationDelay);
+			++numOptionalChainProperties;
+		}
+
+		// empty block policy is optional in order to preserve backwards compatibility with existing configurations;
+		// when absent it defaults to Normal, which harvests empty blocks like the original protocol
+		config.EmptyBlockPolicy = EmptyBlockPolicyMode::Normal;
+		if (bag.contains(utils::ConfigurationKey("chain", "emptyBlockPolicy"))) {
+			LOAD_CHAIN_PROPERTY(EmptyBlockPolicy);
+			++numOptionalChainProperties;
+		}
+
+		config.EmptyBlockHeartbeatInterval = utils::TimeSpan::FromSeconds(86'400);
+		if (bag.contains(utils::ConfigurationKey("chain", "emptyBlockHeartbeatInterval"))) {
+			LOAD_CHAIN_PROPERTY(EmptyBlockHeartbeatInterval);
 			++numOptionalChainProperties;
 		}
 

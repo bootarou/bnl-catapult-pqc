@@ -35,20 +35,17 @@ namespace catapult { namespace model {
 	namespace {
 		using HeightUnorderedSet = std::unordered_set<Height, utils::BaseValueHasher<Height>>;
 
-		constexpr auto Nemesis_Signer_Public_Key = "C738E237C98760FA72726BA13DC2A1E3C13FA67DE26AF09742E972EE4EE45E1C";
+		// ML-DSA-44 public keys are 1312 bytes; synthesize a fixed-value hex string of the right size
+		static const std::string Nemesis_Signer_Public_Key(2 * Key::Size, 'C');
+		static const std::string Nemesis_Signer_Vrf_Public_Key(2 * VrfPublicKey::Size, 'D');
 		constexpr auto Nemesis_Generation_Hash_Seed = "CE076EF4ABFBC65B046987429E274EC31506D173E91BF102F16BEB7FB8176230";
 		constexpr auto Harvest_Network_Fee_Sink_Address_V1 = "TBTBPZBJV3U5PU6TNC6GOSB54E5IZA5KQ6KGJXY";
 		constexpr auto Harvest_Network_Fee_Sink_Address = "TCRRSPVMOOPX3QA2JRN432LFODY2KA4EJBEZUKQ";
 
-		constexpr auto Signature_1 =
-			"395C2B37C7AABBEC3C08BD42DAF52D93D1BF003FF6A731E54F63003383EF1CE0"
-			"302871ADD90DF04638DC617ACF2F5BB759C3DDC060E55A554477543210976C75";
-		constexpr auto Signature_2 =
-			"401ECCE607FF9710A00B677A487D36B9B9B3B0DC6DF59DA0A2BD77603E80B82B"
-			"D0A82FE949055C5BB7A00F83AF4FF1242965CBF62C9D083344FF294D157259B2";
-		constexpr auto Signature_3 =
-			"3A785A34EA7FAB8AD7ED1B95EC0C0C1CC4097104DD3A47AB06E138D59DC48D75"
-			"300996EDEF0C24641EE5EFFD83A3EFE10CE4CA41DAAF642342E988A0A0EA7FB6";
+		// ML-DSA-44 signatures are 2420 bytes; synthesize fixed-value hex strings of the right size
+		static const std::string Signature_1(2 * Signature::Size, '1');
+		static const std::string Signature_2(2 * Signature::Size, '2');
+		static const std::string Signature_3(2 * Signature::Size, '3');
 
 		constexpr auto Hash_1 = "8F5D7161352C39A7F179917851E66A2A9ED7675DD568B91F8314ABCEA654F368";
 		constexpr auto Hash_2 = "18A842F09E7D9B23417EF83F27D341473DCAB1EECD653915C46DB7040590A25C";
@@ -68,6 +65,7 @@ namespace catapult { namespace model {
 							{ "identifier", "testnet" },
 							{ "nodeEqualityStrategy", "host" },
 							{ "nemesisSignerPublicKey", Nemesis_Signer_Public_Key },
+							{ "nemesisSignerVrfPublicKey", Nemesis_Signer_Vrf_Public_Key },
 							{ "generationHashSeed", Nemesis_Generation_Hash_Seed },
 							{ "epochAdjustment", "1234567h" }
 						}
@@ -167,6 +165,7 @@ namespace catapult { namespace model {
 				EXPECT_EQ(NetworkIdentifier::Zero, config.Network.Identifier);
 				EXPECT_EQ(static_cast<NodeIdentityEqualityStrategy>(0), config.Network.NodeEqualityStrategy);
 				EXPECT_EQ(Key(), config.Network.NemesisSignerPublicKey);
+				EXPECT_EQ(VrfPublicKey(), config.Network.NemesisSignerVrfPublicKey);
 				EXPECT_EQ(GenerationHashSeed(), config.Network.GenerationHashSeed);
 				EXPECT_EQ(utils::TimeSpan(), config.Network.EpochAdjustment);
 
@@ -209,6 +208,8 @@ namespace catapult { namespace model {
 				EXPECT_EQ(0u, config.MaxTransactionsPerBlock);
 
 				EXPECT_EQ(Height(0), config.ChainFinalizationHeight);
+				EXPECT_EQ(EmptyBlockPolicyMode::Normal, config.EmptyBlockPolicy);
+				EXPECT_EQ(utils::TimeSpan(), config.EmptyBlockHeartbeatInterval);
 
 				EXPECT_EQ(Height(0), config.ForkHeights.TotalVotingBalanceCalculationFix);
 				EXPECT_EQ(Height(0), config.ForkHeights.TreasuryReissuance);
@@ -228,6 +229,7 @@ namespace catapult { namespace model {
 				EXPECT_EQ(NetworkIdentifier::Testnet, config.Network.Identifier);
 				EXPECT_EQ(NodeIdentityEqualityStrategy::Host, config.Network.NodeEqualityStrategy);
 				EXPECT_EQ(utils::ParseByteArray<Key>(Nemesis_Signer_Public_Key), config.Network.NemesisSignerPublicKey);
+				EXPECT_EQ(utils::ParseByteArray<VrfPublicKey>(Nemesis_Signer_Vrf_Public_Key), config.Network.NemesisSignerVrfPublicKey);
 				EXPECT_EQ(utils::ParseByteArray<GenerationHashSeed>(Nemesis_Generation_Hash_Seed), config.Network.GenerationHashSeed);
 				EXPECT_EQ(utils::TimeSpan::FromHours(1234567), config.Network.EpochAdjustment);
 
@@ -271,6 +273,11 @@ namespace catapult { namespace model {
 
 				// chainFinalizationHeight is optional and absent from the custom bag, so it defaults to Height(0)
 				EXPECT_EQ(Height(0), config.ChainFinalizationHeight);
+
+				// the empty block policy properties are optional and absent from the custom bag, so they default
+				// to Normal (legacy behavior) with a one day heartbeat interval
+				EXPECT_EQ(EmptyBlockPolicyMode::Normal, config.EmptyBlockPolicy);
+				EXPECT_EQ(utils::TimeSpan::FromSeconds(86'400), config.EmptyBlockHeartbeatInterval);
 
 				EXPECT_EQ(Height(998877), config.ForkHeights.TotalVotingBalanceCalculationFix);
 				EXPECT_EQ(Height(11998877), config.ForkHeights.TreasuryReissuance);
@@ -320,6 +327,36 @@ namespace catapult { namespace model {
 
 		// Assert:
 		EXPECT_EQ(Height(5000), config.ChainFinalizationHeight);
+	}
+
+	TEST(TEST_CLASS, CanLoadBlockchainConfigurationWithEmptyBlockPolicy) {
+		// Arrange:
+		for (const auto& pair : std::initializer_list<std::pair<const char*, EmptyBlockPolicyMode>>{
+				{ "normal", EmptyBlockPolicyMode::Normal },
+				{ "suppress", EmptyBlockPolicyMode::Suppress },
+				{ "heartbeat", EmptyBlockPolicyMode::Heartbeat } }) {
+			auto container = BlockchainConfigurationTraits::CreateProperties();
+			container["chain"].emplace_back("emptyBlockPolicy", pair.first);
+			container["chain"].emplace_back("emptyBlockHeartbeatInterval", "4h");
+
+			// Act:
+			auto config = BlockchainConfiguration::LoadFromBag(utils::ConfigurationBag(std::move(container)));
+
+			// Assert:
+			EXPECT_EQ(pair.second, config.EmptyBlockPolicy) << pair.first;
+			EXPECT_EQ(utils::TimeSpan::FromHours(4), config.EmptyBlockHeartbeatInterval) << pair.first;
+		}
+	}
+
+	TEST(TEST_CLASS, CannotLoadBlockchainConfigurationWithInvalidEmptyBlockPolicy) {
+		// Arrange:
+		auto container = BlockchainConfigurationTraits::CreateProperties();
+		container["chain"].emplace_back("emptyBlockPolicy", "sometimes");
+
+		// Act + Assert:
+		EXPECT_THROW(
+				BlockchainConfiguration::LoadFromBag(utils::ConfigurationBag(std::move(container))),
+				utils::property_malformed_error);
 	}
 
 	TEST(TEST_CLASS, CannotLoadBlockchainConfigurationWithInvalidNetwork) {

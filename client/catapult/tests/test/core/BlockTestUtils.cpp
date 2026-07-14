@@ -20,6 +20,7 @@
 **/
 
 #include "BlockTestUtils.h"
+#include "catapult/crypto/iVrf.h"
 #include "BlockStatementTestUtils.h"
 #include "EntityTestUtils.h"
 #include "sdk/src/extensions/BlockExtensions.h"
@@ -208,7 +209,9 @@ namespace catapult { namespace test {
 	}
 
 	model::BlockElement BlockToBlockElement(const model::Block& block, const GenerationHashSeed& generationHashSeed) {
-		auto generationHash = model::CalculateGenerationHash(block.GenerationHashProof.Gamma);
+		// iVRF: the generation hash binds the revealed leaf to the parent generation hash; tests do not
+		// track parents here, so derive a deterministic value from the proof leaf alone
+		auto generationHash = crypto::iVrfGenerationHash(block.GenerationHashProof, { nullptr, 0 });
 		return extensions::BlockExtensions(generationHashSeed).convertBlockToBlockElement(block, generationHash);
 	}
 
