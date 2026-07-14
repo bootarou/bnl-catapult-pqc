@@ -19,6 +19,10 @@ BNL(Post-Quantum Catapult プロジェクト)がこれまでに作った catapul
         │   repo: bootarou/custom-catapult-chainFinalizationHeight
         │        (main = 上流 + 安定化修正 + chainFinalizationHeight)
         │
+        ├─②' + emptyBlockPolicy(非PQC)                  313145613
+        │     branch: feat-empty-block-policy(同リポジトリ)
+        │     ④ の実装から iVRF 固有部分を除いた移植
+        │
         └─③ + PQC 化(ML-DSA-44 / iVRF / ML-KEM-768 / ML-DSA voting)
               │   repo: bootarou/bnl-catapult-pqc
               │   作業ブランチ: feat-VRF/votiong
@@ -33,18 +37,22 @@ BNL(Post-Quantum Catapult プロジェクト)がこれまでに作った catapul
 
 ## 2. 成果物マップ(世代 × 配布物)
 
-| | ① 通常 Symbol | ② +chainFinalization | ③ PQC 版 | ④ PQC + emptyBlockPolicy |
-|---|---|---|---|---|
-| **catapult リポジトリ** | [symbolplatform/symbol](https://github.com/symbol/symbol) | [custom-catapult-chainFinalizationHeight](https://github.com/bootarou/custom-catapult-chainFinalizationHeight)(main) | [bnl-catapult-pqc](https://github.com/bootarou/bnl-catapult-pqc) `feat-VRF/votiong` | 同 `feat-empty-block-policy`(31a1b5a58) |
-| **server イメージ** | `symbolplatform/symbol-server:gcc-1.0.3.9` | `nftdrive/bnl-catapult-server:1.0.3.9-cf1` | `nftdrive/bnl-catapult-server-pqc:1.0.3.9-bnl` | `nftdrive/bnl-catapult-server-pqc:1.0.3.9-bnl-ebp` |
-| **REST イメージ** | `symbolplatform/symbol-rest:2.4.3` | (公式流用) | `nftdrive/bnl-catapult-rest-pqc:2.4.3-bnl` | ③と同じ(変更不要) |
-| **SDK (JavaScript)** | 公式 symbol-sdk | (公式流用) | [pqc-catapult-sdk-v2](https://github.com/bootarou/pqc-catapult-sdk-v2) / [pqc-catapult-sdk-v3](https://github.com/bootarou/pqc-catapult-sdk-v3)(各 `feat-pqc`) | ③と同じ(変更不要) |
-| **symbol-bootstrap** | 公式 | — | [bootarou/symbol-bootstrap](https://github.com/bootarou/symbol-bootstrap) `pqc-bootstrap` | 同 `feat-empty-block-policy`(f071503) |
-| **BNL launcher** | [blockchain-network-launcher](https://github.com/bootarou/blockchain-network-launcher) main / dev | `feat-custom-catapult` | `feat-PQC-custom-catapult` | 同 `feat-empty-block-policy`(a6f01bc) |
-| **explorer** | 公式 symbol-explorer | — | [pqc-catapult-explorer](https://github.com/bootarou/pqc-catapult-explorer) `feat-pqc`(SMD 統合済み) | ③と同じ |
+| | ① 通常 Symbol | ② +chainFinalization | ②' 非PQC + emptyBlockPolicy | ③ PQC 版 | ④ PQC + emptyBlockPolicy |
+|---|---|---|---|---|---|
+| **catapult リポジトリ** | [symbolplatform/symbol](https://github.com/symbol/symbol) | [custom-catapult-chainFinalizationHeight](https://github.com/bootarou/custom-catapult-chainFinalizationHeight)(main) | 同 `feat-empty-block-policy`(313145613) | [bnl-catapult-pqc](https://github.com/bootarou/bnl-catapult-pqc) `feat-VRF/votiong` | 同 `feat-empty-block-policy`(31a1b5a58) |
+| **server イメージ** | `symbolplatform/symbol-server:gcc-1.0.3.9` | `nftdrive/bnl-catapult-server:1.0.3.9-cf1` | (未ビルド・未公開) | `nftdrive/bnl-catapult-server-pqc:1.0.3.9-bnl` | `nftdrive/bnl-catapult-server-pqc:1.0.3.9-bnl-ebp` |
+| **REST イメージ** | `symbolplatform/symbol-rest:2.4.3` | (公式流用) | (公式流用) | `nftdrive/bnl-catapult-rest-pqc:2.4.3-bnl` | ③と同じ(変更不要) |
+| **SDK (JavaScript)** | 公式 symbol-sdk | (公式流用) | (公式流用) | [pqc-catapult-sdk-v2](https://github.com/bootarou/pqc-catapult-sdk-v2) / [pqc-catapult-sdk-v3](https://github.com/bootarou/pqc-catapult-sdk-v3)(各 `feat-pqc`) | ③と同じ(変更不要) |
+| **symbol-bootstrap** | 公式 | — | — | [bootarou/symbol-bootstrap](https://github.com/bootarou/symbol-bootstrap) `pqc-bootstrap` | 同 `feat-empty-block-policy`(f071503) |
+| **BNL launcher** | [blockchain-network-launcher](https://github.com/bootarou/blockchain-network-launcher) main / dev | `feat-custom-catapult` | — | `feat-PQC-custom-catapult` | 同 `feat-empty-block-policy`(a6f01bc) |
+| **explorer** | 公式 symbol-explorer | — | — | [pqc-catapult-explorer](https://github.com/bootarou/pqc-catapult-explorer) `feat-pqc`(SMD 統合済み) | ③と同じ |
 
 ④ で REST / SDK / explorer に変更が不要なのは、emptyBlockPolicy が**ハーベスタのローカル動作**であり、
 ワイヤフォーマット・ブロック検証ルール・API に影響しないため(実チェーンで検証済み)。
+
+②' は ④ の実装から iVRF 固有部分(leaf 消費最適化のコメント等)を除いた移植で、config・判定ロジック・
+Tx 受付デッドロック修正・テストは同一。非PQC はテストツリーが健全なため、PQC 側では実行保留になっている
+ServiceStateTests(predicate テスト)も **11/11 全パス**で検証済み(model 23/23 / harvesting 24/24)。
 
 ## 3. ④ emptyBlockPolicy 版の構成要素
 
