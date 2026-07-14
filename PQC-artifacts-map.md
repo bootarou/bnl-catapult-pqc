@@ -40,7 +40,7 @@ BNL(Post-Quantum Catapult プロジェクト)がこれまでに作った catapul
 | | ① 通常 Symbol | ② +chainFinalization | ②' 非PQC + emptyBlockPolicy | ③ PQC 版 | ④ PQC + emptyBlockPolicy |
 |---|---|---|---|---|---|
 | **catapult リポジトリ** | [symbolplatform/symbol](https://github.com/symbol/symbol) | [custom-catapult-chainFinalizationHeight](https://github.com/bootarou/custom-catapult-chainFinalizationHeight)(main) | 同 `feat-empty-block-policy`(313145613) | [bnl-catapult-pqc](https://github.com/bootarou/bnl-catapult-pqc) `feat-VRF/votiong` | 同 `feat-empty-block-policy`(31a1b5a58) |
-| **server イメージ** | `symbolplatform/symbol-server:gcc-1.0.3.9` | `nftdrive/bnl-catapult-server:1.0.3.9-cf1` | (未ビルド・未公開) | `nftdrive/bnl-catapult-server-pqc:1.0.3.9-bnl` | `nftdrive/bnl-catapult-server-pqc:1.0.3.9-bnl-ebp` |
+| **server イメージ** | `symbolplatform/symbol-server:gcc-1.0.3.9` | `nftdrive/bnl-catapult-server:1.0.3.9-cf1` | `nftdrive/bnl-catapult-server:1.0.3.9-cf1-ebp` | `nftdrive/bnl-catapult-server-pqc:1.0.3.9-bnl` | `nftdrive/bnl-catapult-server-pqc:1.0.3.9-bnl-ebp` |
 | **REST イメージ** | `symbolplatform/symbol-rest:2.4.3` | (公式流用) | (公式流用) | `nftdrive/bnl-catapult-rest-pqc:2.4.3-bnl` | ③と同じ(変更不要) |
 | **SDK (JavaScript)** | 公式 symbol-sdk | (公式流用) | (公式流用) | [pqc-catapult-sdk-v2](https://github.com/bootarou/pqc-catapult-sdk-v2) / [pqc-catapult-sdk-v3](https://github.com/bootarou/pqc-catapult-sdk-v3)(各 `feat-pqc`) | ③と同じ(変更不要) |
 | **symbol-bootstrap** | 公式 | — | — | [bootarou/symbol-bootstrap](https://github.com/bootarou/symbol-bootstrap) `pqc-bootstrap` | 同 `feat-empty-block-policy`(f071503) |
