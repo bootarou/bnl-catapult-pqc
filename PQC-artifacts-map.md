@@ -44,7 +44,7 @@ BNL(Post-Quantum Catapult プロジェクト)がこれまでに作った catapul
 | **REST イメージ** | `symbolplatform/symbol-rest:2.4.3` | (公式流用) | (公式流用) | `nftdrive/bnl-catapult-rest-pqc:2.4.3-bnl` | ③と同じ(変更不要) |
 | **SDK (JavaScript)** | 公式 symbol-sdk | (公式流用) | (公式流用) | [pqc-catapult-sdk-v2](https://github.com/bootarou/pqc-catapult-sdk-v2) / [pqc-catapult-sdk-v3](https://github.com/bootarou/pqc-catapult-sdk-v3)(各 `feat-pqc`) | ③と同じ(変更不要) |
 | **symbol-bootstrap** | 公式 | — | — | [bootarou/symbol-bootstrap](https://github.com/bootarou/symbol-bootstrap) `pqc-bootstrap` | 同 `feat-empty-block-policy`(f071503) |
-| **BNL launcher** | [blockchain-network-launcher](https://github.com/bootarou/blockchain-network-launcher) main / dev | `feat-custom-catapult` | — | `feat-PQC-custom-catapult` | 同 `feat-empty-block-policy`(a6f01bc) |
+| **BNL launcher** | [blockchain-network-launcher](https://github.com/bootarou/blockchain-network-launcher) main / dev | `feat-custom-catapult` | `feat-empty-block-policy-cf`(75a30bf) | `feat-PQC-custom-catapult` | 同 `feat-empty-block-policy`(a6f01bc) |
 | **explorer** | 公式 symbol-explorer | — | — | [pqc-catapult-explorer](https://github.com/bootarou/pqc-catapult-explorer) `feat-pqc`(SMD 統合済み) | ③と同じ |
 
 ④ で REST / SDK / explorer に変更が不要なのは、emptyBlockPolicy が**ハーベスタのローカル動作**であり、
@@ -53,6 +53,12 @@ BNL(Post-Quantum Catapult プロジェクト)がこれまでに作った catapul
 ②' は ④ の実装から iVRF 固有部分(leaf 消費最適化のコメント等)を除いた移植で、config・判定ロジック・
 Tx 受付デッドロック修正・テストは同一。非PQC はテストツリーが健全なため、PQC 側では実行保留になっている
 ServiceStateTests(predicate テスト)も **11/11 全パス**で検証済み(model 23/23 / harvesting 24/24)。
+
+②'系の bootstrap は**公式 symbol-bootstrap のまま**で、launcher が config 生成後に
+プロパティを注入する(postGenPatches)。launcher `feat-empty-block-policy-cf` では
+`CUSTOM_SERVER_IMAGE` に既知の BNL イメージを指定するだけで対応プロパティが**自動注入**される
+(`*-cf<N>` → chainFinalizationHeight=0、`*-ebp` → +emptyBlockPolicy=heartbeat / 86400s。
+UI「カスタム設定」で編集可、`CUSTOM_CONFIG_PATCHES` でキー単位の上書きも可)。
 
 ## 3. ④ emptyBlockPolicy 版の構成要素
 
