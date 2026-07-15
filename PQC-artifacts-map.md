@@ -15,18 +15,15 @@ BNL(Post-Quantum Catapult プロジェクト)がこれまでに作った catapul
   │
   ├─① 通常 Symbol 版(公式そのまま)
   │
-  └─② + chainFinalizationHeight(非PQC)                 7734b8da6
+  └─② BNL 非PQC 版 = + chainFinalizationHeight + emptyBlockPolicy
         │   repo: bootarou/custom-catapult-chainFinalizationHeight
-        │        (main = 上流 + 安定化修正 + chainFinalizationHeight)
-        │
-        ├─②' + emptyBlockPolicy(非PQC)                  313145613
-        │     branch: feat-empty-block-policy(同リポジトリ)
-        │     ④ の実装から iVRF 固有部分を除いた移植
+        │   main = 上流 + 安定化修正 + cf(7734b8da6)+ ebp(313145613)に統合済み
+        │   ※ 公式 Symbol と完全にプロトコル互換(両機能とも既定 = 従来挙動)
         │
         └─③ + PQC 化(ML-DSA-44 / iVRF / ML-KEM-768 / ML-DSA voting)
               │   repo: bootarou/bnl-catapult-pqc
               │   作業ブランチ: feat-VRF/votiong
-              │   ※ ② の chainFinalizationHeight を含んだまま PQC 化
+              │   ※ chainFinalizationHeight を含んだまま PQC 化(ebp 追加前に分岐)
               │
               └─④ + emptyBlockPolicy                     31a1b5a58
                     branch: feat-empty-block-policy
@@ -35,30 +32,37 @@ BNL(Post-Quantum Catapult プロジェクト)がこれまでに作った catapul
 
 機能は**累積**する: ④ = 上流 + 安定化修正 + chainFinalizationHeight + PQC 一式 + emptyBlockPolicy。
 
+**住み分け(非PQC)**: 公式ネットワーク参加は①(公式イメージ)、プライベート/データチェーンは
+②(BNL 版 = cf + ebp の 1 本)を使う。②は 2026-07-15 に cf 単体(旧 `1.0.3.9-cf1`)と
+ebp 追加版を **main / `1.0.3.9-cf1-ebp` に一本化**した(旧 cf1 イメージはレガシー。
+ebp 版は cf 機能を包含し、既定値では挙動も同一のため置き換え可)。
+
 ## 2. 成果物マップ(世代 × 配布物)
 
-| | ① 通常 Symbol | ② +chainFinalization | ②' 非PQC + emptyBlockPolicy | ③ PQC 版 | ④ PQC + emptyBlockPolicy |
-|---|---|---|---|---|---|
-| **catapult リポジトリ** | [symbolplatform/symbol](https://github.com/symbol/symbol) | [custom-catapult-chainFinalizationHeight](https://github.com/bootarou/custom-catapult-chainFinalizationHeight)(main) | 同 `feat-empty-block-policy`(313145613) | [bnl-catapult-pqc](https://github.com/bootarou/bnl-catapult-pqc) `feat-VRF/votiong` | 同 `feat-empty-block-policy`(31a1b5a58) |
-| **server イメージ** | `symbolplatform/symbol-server:gcc-1.0.3.9` | `nftdrive/bnl-catapult-server:1.0.3.9-cf1` | `nftdrive/bnl-catapult-server:1.0.3.9-cf1-ebp` | `nftdrive/bnl-catapult-server-pqc:1.0.3.9-bnl` | `nftdrive/bnl-catapult-server-pqc:1.0.3.9-bnl-ebp` |
-| **REST イメージ** | `symbolplatform/symbol-rest:2.4.3` | (公式流用) | (公式流用) | `nftdrive/bnl-catapult-rest-pqc:2.4.3-bnl` | ③と同じ(変更不要) |
-| **SDK (JavaScript)** | 公式 symbol-sdk | (公式流用) | (公式流用) | [pqc-catapult-sdk-v2](https://github.com/bootarou/pqc-catapult-sdk-v2) / [pqc-catapult-sdk-v3](https://github.com/bootarou/pqc-catapult-sdk-v3)(各 `feat-pqc`) | ③と同じ(変更不要) |
-| **symbol-bootstrap** | 公式 | — | — | [bootarou/symbol-bootstrap](https://github.com/bootarou/symbol-bootstrap) `pqc-bootstrap` | 同 `feat-empty-block-policy`(f071503) |
-| **BNL launcher** | [blockchain-network-launcher](https://github.com/bootarou/blockchain-network-launcher) main / dev | `feat-custom-catapult` | `feat-empty-block-policy-cf`(75a30bf) | `feat-PQC-custom-catapult` | 同 `feat-empty-block-policy`(a6f01bc) |
-| **explorer** | 公式 symbol-explorer | — | — | [pqc-catapult-explorer](https://github.com/bootarou/pqc-catapult-explorer) `feat-pqc`(SMD 統合済み) | ③と同じ |
+| | ① 通常 Symbol | ② BNL 非PQC 版(cf + ebp) | ③ PQC 版 | ④ PQC + emptyBlockPolicy |
+|---|---|---|---|---|
+| **catapult リポジトリ** | [symbolplatform/symbol](https://github.com/symbol/symbol) | [custom-catapult-chainFinalizationHeight](https://github.com/bootarou/custom-catapult-chainFinalizationHeight)(main = 313145613) | [bnl-catapult-pqc](https://github.com/bootarou/bnl-catapult-pqc) `feat-VRF/votiong` | 同 `feat-empty-block-policy`(31a1b5a58) |
+| **server イメージ** | `symbolplatform/symbol-server:gcc-1.0.3.9` | `nftdrive/bnl-catapult-server:1.0.3.9-cf1-ebp`(旧 `1.0.3.9-cf1` はレガシー) | `nftdrive/bnl-catapult-server-pqc:1.0.3.9-bnl` | `nftdrive/bnl-catapult-server-pqc:1.0.3.9-bnl-ebp` |
+| **REST イメージ** | `symbolplatform/symbol-rest:2.4.3` | (公式流用) | `nftdrive/bnl-catapult-rest-pqc:2.4.3-bnl` | ③と同じ(変更不要) |
+| **SDK (JavaScript)** | 公式 symbol-sdk | (公式流用) | [pqc-catapult-sdk-v2](https://github.com/bootarou/pqc-catapult-sdk-v2) / [pqc-catapult-sdk-v3](https://github.com/bootarou/pqc-catapult-sdk-v3)(各 `feat-pqc`) | ③と同じ(変更不要) |
+| **symbol-bootstrap** | 公式 | 公式(launcher が生成後にプロパティ注入) | [bootarou/symbol-bootstrap](https://github.com/bootarou/symbol-bootstrap) `pqc-bootstrap` | 同 `feat-empty-block-policy`(f071503) |
+| **BNL launcher** | [blockchain-network-launcher](https://github.com/bootarou/blockchain-network-launcher) main / dev | `feat-empty-block-policy-cf`(0841ddc) | `feat-PQC-custom-catapult` | 同 `feat-empty-block-policy`(a6f01bc) |
+| **explorer** | 公式 symbol-explorer | 公式 | [pqc-catapult-explorer](https://github.com/bootarou/pqc-catapult-explorer) `feat-pqc`(SMD 統合済み) | ③と同じ |
 
-④ で REST / SDK / explorer に変更が不要なのは、emptyBlockPolicy が**ハーベスタのローカル動作**であり、
-ワイヤフォーマット・ブロック検証ルール・API に影響しないため(実チェーンで検証済み)。
+② / ④ で REST / SDK / explorer に変更が不要なのは、emptyBlockPolicy(と chainFinalizationHeight)が
+**ハーベスタ/ノードのローカル動作**であり、ワイヤフォーマット・ブロック検証ルール・API に影響しない
+ため(実チェーンで検証済み)。
 
-②' は ④ の実装から iVRF 固有部分(leaf 消費最適化のコメント等)を除いた移植で、config・判定ロジック・
+② の実装は ④ から iVRF 固有部分(leaf 消費最適化のコメント等)を除いた移植で、config・判定ロジック・
 Tx 受付デッドロック修正・テストは同一。非PQC はテストツリーが健全なため、PQC 側では実行保留になっている
 ServiceStateTests(predicate テスト)も **11/11 全パス**で検証済み(model 23/23 / harvesting 24/24)。
 
-②'系の bootstrap は**公式 symbol-bootstrap のまま**で、launcher が config 生成後に
-プロパティを注入する(postGenPatches)。launcher `feat-empty-block-policy-cf` では
-`CUSTOM_SERVER_IMAGE` に既知の BNL イメージを指定するだけで対応プロパティが**自動注入**される
-(`*-cf<N>` → chainFinalizationHeight=0、`*-ebp` → +emptyBlockPolicy=heartbeat / 86400s。
-UI「カスタム設定」で編集可、`CUSTOM_CONFIG_PATCHES` でキー単位の上書きも可)。
+② の bootstrap は**公式 symbol-bootstrap のまま**で、launcher が config 生成後に
+プロパティを注入する(postGenPatches)。launcher `feat-empty-block-policy-cf` は
+**既定で BNL イメージ(`1.0.3.9-cf1-ebp`)をバージョン選択肢に表示**し、選択すると
+chainFinalizationHeight=0 / emptyBlockPolicy=heartbeat / emptyBlockHeartbeatInterval=86400s が
+**自動注入**される(UI「カスタム設定」で編集可、`CUSTOM_CONFIG_PATCHES` でキー単位の上書きも可。
+`CUSTOM_SERVER_IMAGE` で別イメージへの差し替え、`none` で非表示化も可能)。
 
 ## 3. ④ emptyBlockPolicy 版の構成要素
 
